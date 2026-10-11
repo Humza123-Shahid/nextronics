@@ -1,0 +1,460 @@
+.section {
+    --bg: #12151a;
+    --surface: #171b21;
+    --surface-hover: #1d2229;
+    --border: #262c35;
+    --text: #eef1f4;
+    --text-muted: #8b94a0;
+    --copper: #e6a13c;
+    --copper-dark: #c17f22;
+    --cyan: #49d4dd;
+    --sale: #e2574a;
+
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 64px 24px;
+    margin-top: 100px;
+}
+
+.inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(180px, 20%) 1fr;
+    gap: 40px;
+    align-items: start;
+}
+
+/* Sidebar */
+
+.sidebar {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sidebarImage {
+    /* aspect-ratio: 1 / 1.1; */
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--surface), var(--surface-hover));
+    border: 1px solid var(--border);
+}
+
+.sidebarImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s ease;
+}
+
+.sidebarImage:hover img {
+    transform: scale(1.08) rotate(0.5deg);
+}
+
+.sidebarTitle {
+    font-family: var(--font-heading);
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    position: relative;
+    padding-bottom: 12px;
+    margin: 0;
+}
+
+.sidebarTitle::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 36px;
+    height: 3px;
+    background: var(--copper);
+    border-radius: 2px;
+}
+
+/* Content / tabs */
+
+.content {
+    min-width: 0;
+}
+
+.tabs {
+    display: flex;
+    gap: 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.tab {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 10px 2px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.tab:hover {
+    color: var(--text);
+}
+
+.tabActive {
+    color: var(--text);
+}
+
+/* Rendered by Framer Motion's layoutId — slides smoothly between tabs on click. */
+.activeUnderline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--copper);
+    border-radius: 2px;
+}
+
+/* Grid */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+    border-color: #333a45;
+    box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.55);
+}
+
+/* Image loading shimmer */
+
+.imgShimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, #14171c 30%, #1c212a 50%, #14171c 70%);
+    background-size: 200% 100%;
+    animation: gadgetShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes gadgetShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+
+
+.cardImage {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background: #0e1013;
+    overflow: hidden;
+}
+
+.cardImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease, opacity 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.card:hover .cardImage img {
+    transform: scale(1.05);
+}
+
+.saleBadge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: var(--sale);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 4px 9px;
+    border-radius: 20px;
+    z-index: 2;
+}
+
+.cardIcons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 2;
+}
+
+.iconBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(18, 21, 26, 0.85);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.iconBtn:hover {
+    background: var(--copper);
+    color: #12151a;
+}
+
+.addToCart {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: var(--copper);
+    color: #12151a;
+    border: none;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    z-index: 2;
+    overflow: hidden;
+}
+
+.addToCart:hover:not(:disabled) {
+    background: var(--copper-dark);
+}
+
+.addToCart:disabled {
+    cursor: default;
+    background: var(--cyan);
+}
+
+.addToCartInner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.cardInfo {
+    padding: 14px 4px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cardName {
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.35;
+    margin: 0;
+}
+
+.priceRow {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.price {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--copper);
+}
+
+.oldPriceWrap {
+    position: relative;
+    display: inline-block;
+}
+
+.oldPrice {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.oldPriceStrike {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: var(--text-muted);
+    transform-origin: left;
+}
+
+.rating {
+    display: flex;
+    gap: 2px;
+}
+
+.starFilled {
+    fill: var(--copper);
+    stroke: var(--copper);
+}
+
+.starEmpty {
+    fill: none;
+    stroke: var(--text-muted);
+}
+
+/* Accessibility */
+
+.tab:focus-visible,
+.iconBtn:focus-visible,
+.addToCart:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .section * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Touch devices: no hover, so show controls by default (overrides Framer's inline rest-state styles) */
+@media (hover: none) {
+    .cardIcons {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .cardIcons>* {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .addToCart {
+        position: static;
+        margin-top: 8px;
+        border-radius: 6px;
+        transform: none !important;
+    }
+}
+
+/* Responsive breakpoints */
+
+@media (max-width: 1200px) {
+    .grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .inner {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        position: static;
+        flex-direction: row;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .sidebarImage {
+        width: 120px;
+        height: 130px;
+        aspect-ratio: auto;
+        flex-shrink: 0;
+    }
+
+    .sidebarTitle {
+        padding-bottom: 0;
+    }
+
+    .sidebarTitle::after {
+        display: none;
+    }
+
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 560px) {
+    .section {
+        padding: 40px 16px;
+    }
+
+    .tabs {
+        gap: 16px;
+    }
+
+    .tab {
+        font-size: 0.88rem;
+    }
+
+    .cardName {
+        font-size: 0.85rem;
+    }
+
+    .sidebarImage {
+        width: 90px;
+        height: 100px;
+    }
+
+    .sidebarTitle {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .tabs {
+        gap: 10px;
+    }
+
+    .tab {
+        font-size: 0.8rem;
+        padding: 8px 1px 12px;
+    }
+}
+
+@media (max-width: 380px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}

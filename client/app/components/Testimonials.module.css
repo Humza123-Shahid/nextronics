@@ -1,0 +1,193 @@
+.testimonials {
+  --bg: #0a0f1e;
+  --surface: #121a2e;
+  --surface-border: rgba(148, 163, 184, 0.14);
+  --accent: #4cc9f0;
+  --accent-2: #ff6b35;
+  --text-primary: #e9eef7;
+  --text-muted: #8d98b3;
+  --star-filled: #ffb020;
+  --star-empty: rgba(141, 152, 179, 0.4);
+
+  background: var(--bg);
+  padding: clamp(48px, 8vw, 96px) 0;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 48px);
+}
+
+.head {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.heading {
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+  color: var(--text-primary);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.2;
+  font-weight: 600;
+  margin: 14px 0 12px;
+}
+
+.subheading {
+  color: var(--text-muted);
+  font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.marquee {
+  margin-top: clamp(36px, 6vw, 56px);
+  width: 100%;
+  -webkit-mask-image: linear-gradient(to right,
+      transparent 0,
+      #000 64px,
+      #000 calc(100% - 64px),
+      transparent 100%);
+  mask-image: linear-gradient(to right,
+      transparent 0,
+      #000 64px,
+      #000 calc(100% - 64px),
+      transparent 100%);
+}
+
+.marqueeTrack {
+  display: flex;
+  width: max-content;
+  gap: 20px;
+  padding: 4px 0 12px;
+  animation: scrollLeft 45s linear infinite;
+}
+
+.marquee:hover .marqueeTrack,
+.marqueeTrack:focus-within {
+  animation-play-state: paused;
+}
+
+@keyframes scrollLeft {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.card {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(260px, 32vw, 320px);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quoteMark {
+  position: absolute;
+  top: 14px;
+  right: 20px;
+  font-family: "Space Grotesk", serif;
+  font-size: 2.5rem;
+  line-height: 1;
+  color: var(--accent-2);
+  opacity: 0.35;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0f1e;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.patientName {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profession {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stars {
+  display: flex;
+  gap: 3px;
+}
+
+.comment {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .card {
+    width: 78vw;
+    padding: 22px 18px 18px;
+  }
+
+  .marqueeTrack {
+    animation-duration: 32s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrack {
+    animation: none;
+  }
+
+  .marquee {
+    overflow-x: auto;
+  }
+}

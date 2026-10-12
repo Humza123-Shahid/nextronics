@@ -15,7 +15,7 @@ import { INITIAL_METRICS } from "../data/mockData";
 import { useAdmin } from "../context/AdminContext";
 
 export default function DashboardView() {
-  const { setIsAddProductModalOpen, products, orders } = useAdmin();
+  const { setIsAddProductModalOpen, products, orders, views } = useAdmin();
   const now = new Date();
 
   // 1. Get date boundaries
@@ -44,6 +44,63 @@ export default function DashboardView() {
 
     return hasActiveStatus && isWithinDateRange;
   });
+
+  const calculateMonthlyViewChange = (views: any[]) => {
+    const now = new Date();
+
+    // 1. Get date boundaries
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    console.log(startOfThisMonth, startOfLastMonth, endOfLastMonth)
+    let thisMonthView = 0;
+    let lastMonthView = 0;
+
+    // 2. Loop through views once for performance
+    views.forEach(view => {
+      // Replace 'createdAt' with your actual date field name
+      const viewDate = new Date(view.visited_at);
+      //console.log(viewDate)
+      if (viewDate >= startOfThisMonth && viewDate <= now) {
+        thisMonthView += 1;
+      } else if (viewDate >= startOfLastMonth && viewDate <= endOfLastMonth) {
+        lastMonthView += 1;
+      }
+    });
+    console.log(lastMonthView, thisMonthView)
+    // 3. Calculate differences
+    const absoluteChange = thisMonthView - lastMonthView;
+    let percentageChangeView = 0
+    if (absoluteChange >= 0) {
+      percentageChangeView = lastMonthView === 0
+        ? (thisMonthView > 0 ? 100 : 0)
+        : (absoluteChange / lastMonthView) * 100;
+    }
+    else {
+      console.log(lastMonthView, thisMonthView)
+      const positiveChange = lastMonthView - thisMonthView
+
+      percentageChangeView = thisMonthView === 0
+        ? (lastMonthView > 0 ? 100 : 0)
+        : (positiveChange / thisMonthView) * 100;
+    }
+    console.log(percentageChangeView);
+    // Handle division by zero if last month had 0 revenue
+    if (percentageChangeView > 100) {
+      percentageChangeView = 100;
+    }
+    const isViewPositive = thisMonthView > lastMonthView;
+    return {
+      thisMonthView,
+      lastMonthView,
+      absoluteChange,
+      percentageChangeView: percentageChangeView.toFixed(1) + "%",
+      isViewPositive,
+    };
+  };
+
+  // --- How to use it inside your component ---
+  const { thisMonthView, percentageChangeView, isViewPositive } = calculateMonthlyViewChange(views);
   const calculateMonthlyOrderChange = (orders: any[]) => {
     const validActiverOrders = orders.filter(
       (o) => o.status === "pending" || o.status === "confirmed" || o.status === "shipped" || o.status === "processing")
@@ -87,7 +144,9 @@ export default function DashboardView() {
     }
     console.log(percentageChangeCount);
     // Handle division by zero if last month had 0 revenue
-
+    if (percentageChangeCount > 100) {
+      percentageChangeCount = 100;
+    }
     const isOrderCountPositive = thisMonthOrderCount >= lastMonthOrderCount;
     return {
       thisMonthOrderCount,
@@ -143,6 +202,9 @@ export default function DashboardView() {
     // Handle division by zero if last month had 0 revenue
 
     const isrevenuePositive = thisMonthRevenue > lastMonthRevenue;
+    if (percentageChange > 100) {
+      percentageChange = 100;
+    }
     return {
       thisMonthRevenue,
       lastMonthRevenue,
@@ -153,7 +215,7 @@ export default function DashboardView() {
   };
 
   // --- How to use it inside your component ---
-  const { thisMonthRevenue, percentageChange, isrevenuePositive } = calculateMonthlyRevenueChange(orders);
+  const { thisMonthRevenue, percentageChange, isrevenuePositive } = calculateMonthlyRevenueChange(validRevenueOrders);
 
 
   const calculateMonthlyProductChange = (products: any[]) => {
@@ -199,6 +261,9 @@ export default function DashboardView() {
     // Handle division by zero if last month had 0 revenue
 
     const isCountPositive = thisMonthCount > lastMonthCOunt;
+    if (percentageChangeCount > 100) {
+      percentageChangeCount = 100;
+    }
     return {
       thisMonthCount,
       lastMonthCOunt,
@@ -214,14 +279,16 @@ export default function DashboardView() {
   //   .filter((o) => o.payment_status === "paid" || o.status === "delivered")
   //   .reduce((sum, o) => sum + o.grand_total, 0);
   const totalRevenue = validRevenueOrders.reduce((sum, o) => sum + Number(o.grand_total || 0), 0);
+  // const totalViews = views.reduce((sum, o) => sum + Number(o.grand_total || 0), 0);
+
   const dynamicMetrics = [
     {
       id: "views",
       title: "Total Views",
-      value: "345.2K",
-      numericValue: 345200,
-      change: "12.5%",
-      isPositive: true,
+      value: `${views.length}`,
+      numericValue: views.length,
+      change: percentageChangeView,
+      isPositive: isViewPositive,
       period: "vs last month",
       subtext: "+14% unique visitors",
     },

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
   Product,
+  PageVisit,
   ProductVariant,
   AttributeValue,
   Order,
@@ -42,6 +43,7 @@ interface AdminContextType {
 
   // Collections State
   products: Product[];
+  views: PageVisit[];
   categories: CategoryItem[];
   brands: Brand[];
   orders: Order[];
@@ -49,6 +51,7 @@ interface AdminContextType {
 
   // Fetch API Triggers
   fetchProducts: () => Promise<void>;
+  fetchViews: () => Promise<void>;
   fetchCategories: () => Promise<void>;
   fetchBrands: () => Promise<void>;
   fetchOrders: () => Promise<void>;
@@ -360,12 +363,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Data Collections State
   const [products, setProducts] = useState<Product[]>([]);
+  const [views, setViews] = useState<PageVisit[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+
+  useEffect(() => {
+    console.log("AdminContext data on the client:", views);
+  }, [views]);
 
   // Products Modal State
   const [selectedProductForView, setSelectedProductForView] = useState<Product | null>(null);
@@ -737,7 +745,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [categories, brands, enrichProductWithRelationNames]);
 
 
-
+  const fetchViews = useCallback(async () => {
+    try {
+      const data = await api.get<PageVisit[]>("/page-visits/");
+      console.log(data);
+      //const mapped = data.map((p) => enrichProductWithRelationNames(p, categories, brands));
+      setViews(data);
+    } catch (err: any) {
+      console.error("Failed to fetch Views:", err);
+      setError(err.message);
+    }
+  }, []);
   // const fetchCustomers = useCallback(async () => {
   //   try {
   //     const data = await api.get<Customer[]>("/customers/");
@@ -753,6 +771,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     const loadInitialData = async () => {
       setIsLoading(true);
       fetchTestimonials();
+      fetchViews();
       const [fetchedCats, fetchedBrs] = await Promise.all([
         api.get<CategoryItem[]>("/categories/").catch(() => []),
         api.get<Brand[]>("/brands/").catch(() => []),
@@ -777,7 +796,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadInitialData();
-  }, [enrichProductWithRelationNames, fetchOrders]);
+  }, [enrichProductWithRelationNames, fetchOrders, fetchViews]);
   //}, [enrichProductWithRelationNames, fetchOrders, fetchCustomers]);
 
   // useEffect(() => {
@@ -1705,12 +1724,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         error,
 
         products,
+        views,
         categories,
         brands,
         orders,
         customers,
 
         fetchProducts,
+        fetchViews,
         fetchCategories,
         fetchBrands,
         fetchOrders,

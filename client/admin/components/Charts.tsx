@@ -1,14 +1,78 @@
 "use client";
 
 import React, { useState } from "react";
-import { MONTHLY_SALES_DATA, CATEGORY_METRICS } from "../data/mockData";
+// import { MONTHLY_SALES_DATA, CATEGORY_METRICS } from "../data/mockData";
+import { useAdmin } from "../context/AdminContext";
 
 export function RevenueSalesChart() {
-  const [period, setPeriod] = useState<"Day" | "Week" | "Month">("Month");
+  const { setIsAddProductModalOpen, products, orders, views } = useAdmin();
+  // const [period, setPeriod] = useState<"Day" | "Week" | "Month">("Month");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const validOrders = orders.filter(
+    (order: any) =>
+      (order.payment_status === "paid" || order.status === "delivered") &&
+
+      order.status !== "cancelled" &&
+      order.status !== "refunded"
+  );
+  // 1. Define all month names and get current date info (Year 2026)
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonthIndex = currentDate.getMonth(); // 0-indexed (e.g., October is 9)
+
+  // 2. Aggregate valid orders by month
+  const monthlyMap: { [key: string]: { revenue: number; sales: number } } = {};
+  monthNames.forEach((m) => {
+    monthlyMap[m] = { revenue: 0, sales: 0 };
+  });
+
+  validOrders.forEach((order: any) => {
+    const orderDate = new Date(order.placed_at || order.date);
+
+    // Check if the order belongs to the current year
+    if (orderDate.getFullYear() === currentYear) {
+      const monthName = monthNames[orderDate.getMonth()];
+      if (monthName && monthlyMap[monthName]) {
+        const orderRevenue = Number(order.grand_total || 0);
+        const orderSales = Number(order.subtotal || order.grand_total || 0);
+
+        monthlyMap[monthName].revenue += orderRevenue;
+        monthlyMap[monthName].sales += orderSales;
+      }
+    }
+  });
+
+  // 3. Filter to include ONLY previous months (exclude current month and future months)
+  const previousMonths = monthNames.slice(0, currentMonthIndex);
+
+  // 4. Convert map into the dynamic MONTHLY_SALES_DATA array format
+  const MONTHLY_SALES_DATA = previousMonths.map((month) => ({
+    month,
+    revenue: monthlyMap[month].revenue,
+    sales: monthlyMap[month].sales,
+  }));
+
+
+  const totalRevenue = validOrders.reduce(
+    (sum: number, order: any) => sum + Number(order.grand_total || 0),
+    0
+  );
+
+  const totalSalesAmount = validOrders.reduce(
+    (sum: number, order: any) => sum + Number(order.subtotal || order.grand_total || 0),
+    0
+  );
+
+
+  const peakValue = Math.max(
+    ...MONTHLY_SALES_DATA.map((d) => Math.max(d.revenue, d.sales)),
+    1000 // fallback minimum scale
+  );
+  const maxRevenue = Math.ceil(peakValue / 10000) * 10000 || 60000;
 
   // SVG Chart Dimensions
-  const maxRevenue = 60000;
+  //const maxRevenue = 60000;
   const chartHeight = 220;
   const chartWidth = 700;
   const paddingX = 40;
@@ -31,9 +95,8 @@ export function RevenueSalesChart() {
     ""
   );
 
-  const revenueAreaPath = `${revenuePath} L ${pointsRevenue[pointsRevenue.length - 1].x} ${
-    chartHeight - paddingY
-  } L ${pointsRevenue[0].x} ${chartHeight - paddingY} Z`;
+  const revenueAreaPath = `${revenuePath} L ${pointsRevenue[pointsRevenue.length - 1].x} ${chartHeight - paddingY
+    } L ${pointsRevenue[0].x} ${chartHeight - paddingY} Z`;
 
   const salesPath = pointsSales.reduce(
     (acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`),
@@ -49,25 +112,24 @@ export function RevenueSalesChart() {
           <p className="text-xs text-[#8A99AD] mt-0.5">Real-time revenue performance</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Period selector */}
-          <div className="flex items-center rounded-lg bg-[#1C2434] p-1 border border-[#2E3A47]">
+        {/* <div className="flex flex-wrap items-center gap-3"> */}
+        {/* Period selector */}
+        {/* <div className="flex items-center rounded-lg bg-[#1C2434] p-1 border border-[#2E3A47]">
             {(["Day", "Week", "Month"] as const).map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => setPeriod(p)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                  period === p
-                    ? "bg-[#333A48] text-white shadow-xs"
-                    : "text-[#8A99AD] hover:text-white"
-                }`}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${period === p
+                  ? "bg-[#333A48] text-white shadow-xs"
+                  : "text-[#8A99AD] hover:text-white"
+                  }`}
               >
                 {p}
               </button>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Legend Indicators */}
@@ -75,12 +137,12 @@ export function RevenueSalesChart() {
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-[#3C50E0]" />
           <span className="text-xs text-[#8A99AD]">Total Revenue:</span>
-          <span className="text-xs font-bold text-white">$128,430.00</span>
+          <span className="text-xs font-bold text-white">${totalRevenue.toFixed(2)}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-[#06B6D4]" />
           <span className="text-xs text-[#8A99AD]">Total Sales:</span>
-          <span className="text-xs font-bold text-white">$89,200.00</span>
+          <span className="text-xs font-bold text-white">${totalSalesAmount.toFixed(2)}</span>
         </div>
       </div>
 

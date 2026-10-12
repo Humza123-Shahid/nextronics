@@ -357,3 +357,13 @@ export interface Social {
   url?: string;
   created_at?: string;
 }
+
+export interface PageVisit {
+  id?: number;
+  user?: number; // Foreign key user ID sent to backend
+  user_email?: string; // Optional email field returned by backend for display
+  session_key?: string;
+  path: string;
+  ip_address?: string;
+  visited_at?: string;
+}

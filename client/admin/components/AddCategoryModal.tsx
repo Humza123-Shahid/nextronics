@@ -3,7 +3,14 @@
 import React, { useState } from "react";
 import { X, Plus, FolderPlus } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
-
+const generateSlug = (text: string) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
 export default function AddCategoryModal() {
   const { isAddCategoryModalOpen, setIsAddCategoryModalOpen, categories, addCategory } = useAdmin();
 
@@ -48,7 +55,9 @@ export default function AddCategoryModal() {
       // Build FormData payload to support file upload & multipart/form-data
       const payload = new FormData();
       payload.append("name", formData.name);
-      if (formData.slug.trim()) payload.append("slug", formData.slug.trim());
+      //if (formData.slug.trim()) payload.append("slug", formData.slug.trim());
+      const finalSlug = formData.slug.trim() ? formData.slug.trim() : generateSlug(formData.name);
+      payload.append("slug", finalSlug);
       if (formData.parent) payload.append("parent", formData.parent);
       if (formData.description) payload.append("description", formData.description);
       payload.append("is_active", String(formData.is_active));

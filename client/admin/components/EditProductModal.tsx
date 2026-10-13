@@ -4,6 +4,32 @@ import React, { useState, useEffect } from "react";
 import { X, Save, Edit3 } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
 
+const generateSlug = (text: string) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+const parseDimensionsInput = (input: string) => {
+  if (!input || !input.trim()) return null;
+
+  // Try parsing direct JSON
+  try {
+    return JSON.parse(input);
+  } catch {
+    // Fallback: Parse dimensions in format "L x W x H" or "L * W * H"
+    const parts = input.split(/[\s*xX]+/).map((num) => parseFloat(num.trim())).filter((val) => !isNaN(val));
+    if (parts.length >= 3) {
+      return { l: parts[0], w: parts[1], h: parts[2] };
+    }
+    if (parts.length === 2) {
+      return { l: parts[0], w: parts[1] };
+    }
+    return { raw: input };
+  }
+};
 // Helper to format dimensions object or string into readable "L x W x H" format
 const formatDimensionsForInput = (dims: any): string => {
   if (!dims) return "";
@@ -47,6 +73,8 @@ export default function EditProductModal() {
     name: "",
     slug: "",
     sku: "",
+    image: "", // <-- Changed to File
+    sales_count: 0, // <-- Add this
     category: "",
     brand: "",
     price: "",
@@ -85,13 +113,17 @@ export default function EditProductModal() {
         ...prod,
         category: catId,
         brand: brandId,
+        image: null, // Reset file state for clean editing; existing URL is tracked separately or handled by backend if unchanged
+        existingImage: prod.image || "", // Keep track of current image URL
+        sales_count: prod.sales_count ?? 0, // <-- Add this
         price: prod.price ?? "",
         compare_at_price: prod.compare_at_price ?? "",
         cost_price: prod.cost_price ?? "",
         stock_quantity: prod.stock_quantity ?? 0,
         weight_kg: prod.weight_kg ?? "",
         // Formatted to avoid [object Object]
-        dimensions: formatDimensionsForInput(prod.dimensions),
+        // dimensions: formatDimensionsForInput(prod.dimensions),
+        dimensions: prod.dimensions,
         attributes: formatAttributesForInput(prod.attributes),
       });
     }
@@ -110,35 +142,121 @@ export default function EditProductModal() {
       setFormData((prev: any) => ({ ...prev, [name]: value }));
     }
   };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setFormData((prev: any) => ({ ...prev, image: file }));
+    }
+  };
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setIsSubmitting(true);
+
+  //   try {
+  //     // Safely parse JSON attributes if provided as text
+  //     let parsedAttributes = formData.attributes;
+  //     if (typeof formData.attributes === "string" && formData.attributes.trim()) {
+  //       try {
+  //         parsedAttributes = JSON.parse(formData.attributes);
+  //       } catch {
+  //         // Fall back to original string if not valid JSON
+  //         parsedAttributes = formData.attributes;
+  //       }
+  //     }
+
+  //     const payload = {
+  //       ...formData,
+  //       image: formData.image instanceof File ? formData.image : formData.existingImage || "",
+  //       sales_count: Number(formData.sales_count) || 0, // <-- Add this
+  //       price: Number(formData.price),
+  //       compare_at_price: formData.compare_at_price ? Number(formData.compare_at_price) : null,
+  //       cost_price: formData.cost_price ? Number(formData.cost_price) : null,
+  //       stock_quantity: Number(formData.stock_quantity),
+  //       weight_kg: formData.weight_kg ? Number(formData.weight_kg) : null,
+  //       attributes: parsedAttributes,
+  //     };
+
+  //     if (updateProduct) {
+  //       await updateProduct(selectedProductForEdit.id, payload);
+  //     }
+  //     setSelectedProductForEdit(null);
+  //   } catch (err) {
+  //     console.error("Failed to update product:", err);
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      // Safely parse JSON attributes if provided as text
-      let parsedAttributes = formData.attributes;
-      if (typeof formData.attributes === "string" && formData.attributes.trim()) {
+      const data = new FormData();
+      data.append("name", formData.name);
+      //if (formData.slug && formData.slug.trim()) data.append("slug", formData.slug.trim());
+      const finalSlug = formData.slug.trim() ? formData.slug.trim() : generateSlug(formData.name);
+      data.append("slug", finalSlug);
+      data.append("sku", formData.sku);
+      data.append("sales_count", String(Number(formData.sales_count) || 0));
+      data.append("price", String(Number(formData.price)));
+
+      if (formData.compare_at_price !== "" && formData.compare_at_price !== null) {
+        data.append("compare_at_price", String(formData.compare_at_price));
+      }
+      if (formData.cost_price !== "" && formData.cost_price !== null) {
+        data.append("cost_price", String(formData.cost_price));
+      }
+
+      data.append("stock_quantity", String(Number(formData.stock_quantity) || 0));
+      data.append("tax_class", formData.tax_class || "standard");
+
+      if (formData.weight_kg !== "" && formData.weight_kg !== null) {
+        data.append("weight_kg", String(formData.weight_kg));
+      }
+
+      data.append("status", formData.status);
+      data.append("is_active", String(formData.is_active));
+      data.append("is_featured", String(formData.is_featured));
+      data.append("short_description", formData.short_description || "");
+      data.append("description", formData.description || "");
+
+      // Only append new file if user uploaded a new one
+      if (formData.image instanceof File) {
+        data.append("image", formData.image);
+      }
+
+      // Only append foreign keys if they have actual values (fixes blank string 400 error)
+      if (formData.category !== "" && formData.category !== null) {
+        data.append("category", String(formData.category));
+      }
+      if (formData.brand !== "" && formData.brand !== null) {
+        data.append("brand", String(formData.brand));
+      }
+
+      // if (formData.dimensions && String(formData.dimensions).trim()) {
+      //   data.append(
+      //     "dimensions",
+      //     typeof formData.dimensions === "object"
+      //       ? JSON.stringify(formData.dimensions)
+      //       : formData.dimensions
+      //   );
+      // }
+      if (formData.dimensions) {
+        const parsedDims = parseDimensionsInput(formData.dimensions);
+        if (parsedDims) data.append("dimensions", JSON.stringify(parsedDims));
+      }
+      if (formData.attributes && String(formData.attributes).trim()) {
         try {
-          parsedAttributes = JSON.parse(formData.attributes);
+          const parsedAttributes = JSON.parse(formData.attributes);
+          data.append("attributes", JSON.stringify(parsedAttributes));
         } catch {
-          // Fall back to original string if not valid JSON
-          parsedAttributes = formData.attributes;
+          data.append("attributes", formData.attributes);
         }
       }
 
-      const payload = {
-        ...formData,
-        price: Number(formData.price),
-        compare_at_price: formData.compare_at_price ? Number(formData.compare_at_price) : null,
-        cost_price: formData.cost_price ? Number(formData.cost_price) : null,
-        stock_quantity: Number(formData.stock_quantity),
-        weight_kg: formData.weight_kg ? Number(formData.weight_kg) : null,
-        attributes: parsedAttributes,
-      };
-
       if (updateProduct) {
-        await updateProduct(selectedProductForEdit.id, payload);
+        await updateProduct(selectedProductForEdit.id, data);
       }
       setSelectedProductForEdit(null);
     } catch (err) {
@@ -147,7 +265,6 @@ export default function EditProductModal() {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl rounded-2xl border border-[#2E3A47] bg-[#1C2434] p-4 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -208,7 +325,33 @@ export default function EditProductModal() {
               />
             </div>
           </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Update Image File</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-1.5 text-white text-xs file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-700 focus:outline-none"
+              />
+              {formData.existingImage && !formData.image && (
+                <p className="mt-1 text-[10px] text-[#8A99AD] truncate">Current: {formData.existingImage}</p>
+              )}
+              {formData.image instanceof File && (
+                <p className="mt-1 text-[10px] text-amber-400">New File: {formData.image.name}</p>
+              )}
+            </div>
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Sales Count</label>
+              <input
+                type="number"
+                name="sales_count"
+                value={formData.sales_count ?? 0}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+          </div>
           {/* Row 2: Category & Brand */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

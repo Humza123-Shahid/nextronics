@@ -356,13 +356,62 @@ export function ProfitAnalyticsChart() {
     </div>
   );
 }
+interface DeviceStat {
+  name: string;
+  share: number;
+  color: string;
+}
 
+const COLOR_MAP: Record<string, string> = {
+  Desktop: "#3C50E0",
+  Mobile: "#06B6D4",
+  Tablet: "#10B981",
+  Unknown: "#6B7280",
+};
 export function VisitorsDeviceChart() {
-  const devices = [
-    { name: "Desktop", share: 58, color: "#3C50E0" },
-    { name: "Mobile", share: 34, color: "#06B6D4" },
-    { name: "Tablet", share: 8, color: "#10B981" },
-  ];
+
+  // --- CALCULATIONS BASED SOLELY ON THE 'views' STATE ---
+  const { views } = useAdmin();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed (0 = January, 11 = December)
+
+  // 1. Filter views strictly for the current month & year
+  const currentMonthViews = views.filter((visit) => {
+    const visitDate = new Date(visit.visited_at!);
+    return (
+      visitDate.getFullYear() === currentYear &&
+      visitDate.getMonth() === currentMonth
+    );
+  });
+
+  // 2. Calculate total views for the current month
+  const totalViews = currentMonthViews.length;
+
+  // 3. Count occurrences per device type for the current month
+  const deviceCounts: Record<string, number> = {};
+  currentMonthViews.forEach((visit) => {
+    const device = visit.device_type || "Unknown";
+    deviceCounts[device] = (deviceCounts[device] || 0) + 1;
+  });
+
+  // 4. Map into your desired structure with calculated percentage shares
+  const devices: DeviceStat[] = Object.keys(deviceCounts).map((deviceName) => {
+    const count = deviceCounts[deviceName];
+    const share = totalViews > 0 ? Math.round((count / totalViews) * 100) : 0;
+
+    return {
+      name: deviceName,
+      share: share,
+      color: COLOR_MAP[deviceName] || "#CBD5E1",
+    };
+  });
+
+  // const devices = [
+  //   { name: "Desktop", share: 58, color: "#3C50E0" },
+  //   { name: "Mobile", share: 34, color: "#06B6D4" },
+  //   { name: "Tablet", share: 8, color: "#10B981" },
+  // ];
 
   return (
     <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-5 sm:p-7.5 shadow-md flex flex-col justify-between">
@@ -426,7 +475,7 @@ export function VisitorsDeviceChart() {
           </svg>
 
           <div className="absolute flex flex-col items-center">
-            <span className="text-2xl font-bold text-white">3,456</span>
+            <span className="text-2xl font-bold text-white">{totalViews.toLocaleString()}</span>
             <span className="text-[11px] text-[#8A99AD]">Total Visitors</span>
           </div>
         </div>

@@ -3,7 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { X, Save, Edit3 } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
-
+const generateSlug = (text: string) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
 export default function EditCategoryModal() {
   const {
     selectedCategoryForEdit,
@@ -69,7 +76,9 @@ export default function EditCategoryModal() {
     try {
       const payload = new FormData();
       payload.append("name", formData.name);
-      if (formData.slug) payload.append("slug", formData.slug);
+      //if (formData.slug) payload.append("slug", formData.slug);
+      const finalSlug = formData.slug.trim() ? formData.slug.trim() : generateSlug(formData.name);
+      payload.append("slug", finalSlug);
       if (formData.parent) payload.append("parent", formData.parent);
       else payload.append("parent", "");
       payload.append("description", formData.description || "");

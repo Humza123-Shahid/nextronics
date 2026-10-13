@@ -3,7 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { X, Save, Edit3, Upload } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
-
+const generateSlug = (text: string) => {
+    return text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+};
 export default function EditBrandModal() {
     const {
         selectedBrandForEdit,
@@ -63,7 +70,9 @@ export default function EditBrandModal() {
         try {
             const payload = new FormData();
             payload.append("name", formData.name);
-            payload.append("slug", formData.slug);
+            //payload.append("slug", formData.slug);
+            const finalSlug = formData.slug.trim() ? formData.slug.trim() : generateSlug(formData.name);
+            payload.append("slug", finalSlug);
             payload.append("description", formData.description);
             if (logoFile) {
                 payload.append("logo", logoFile);

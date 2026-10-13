@@ -125,6 +125,22 @@ export default function ViewProductModal() {
 
         {/* Content */}
         <div className="mt-5 space-y-5">
+          {product.image && (
+            <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-3 flex items-center gap-4">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="h-16 w-16 rounded-lg object-cover border border-[#2E3A47]"
+                onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+              />
+              <div className="min-w-0 flex-1">
+                <span className="text-[#8A99AD] block text-[11px]">Product Image URL</span>
+                <a href={product.image} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline text-xs truncate block font-mono">
+                  {product.image}
+                </a>
+              </div>
+            </div>
+          )}
           {/* Key Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
             <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-3">
@@ -133,7 +149,12 @@ export default function ViewProductModal() {
                 ${Number(product.price).toFixed(2)}
               </span>
             </div>
-
+            <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-3">
+              <span className="text-[10px] sm:text-[11px] text-[#8A99AD] block uppercase font-medium">Sales Count</span>
+              <span className="text-base sm:text-xl font-bold text-white mt-0.5 block truncate">
+                {product.sales_count ?? 0} <span className="text-xs font-normal text-[#8A99AD]">sold</span>
+              </span>
+            </div>
             <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-3">
               <span className="text-[10px] sm:text-[11px] text-[#8A99AD] block uppercase font-medium">Compare At</span>
               <span className="text-base sm:text-xl font-bold text-slate-300 mt-0.5 block truncate">

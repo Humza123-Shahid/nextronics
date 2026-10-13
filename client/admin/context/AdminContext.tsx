@@ -58,8 +58,10 @@ interface AdminContextType {
   //fetchCustomers: () => Promise<void>;
 
   // Products CRUD
-  addProduct: (product: Omit<Product, "id" | "created_at" | "updated_at">) => Promise<void>;
-  updateProduct: (id: number | string, product: Partial<Product>) => Promise<void>;
+  addProduct: (product: FormData | Record<string, any>) => Promise<void>;
+  updateProduct: (id: number | string, product: FormData | Record<string, any>) => Promise<void>;
+  // addProduct: (product: Omit<Product, "id" | "created_at" | "updated_at">) => Promise<void>;
+  // updateProduct: (id: number | string, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: number | string) => Promise<void>;
   selectedProductForView: Product | null;
   setSelectedProductForView: (product: Product | null) => void;
@@ -821,32 +823,43 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Products CRUD Operations
-  const addProduct = async (newProd: Omit<Product, "id" | "created_at" | "updated_at">) => {
-    const payload = {
-      ...newProd,
-      category_id: newProd.category_id ? Number(newProd.category_id) : null,
-      brand_id: newProd.brand_id ? Number(newProd.brand_id) : null,
-    };
-    const response = await api.post<Product>("/products/", payload);
+  // const addProduct = async (newProd: Omit<Product, "id" | "created_at" | "updated_at">) => {
+  //   const payload = {
+  //     ...newProd,
+  //     category_id: newProd.category_id ? Number(newProd.category_id) : null,
+  //     brand_id: newProd.brand_id ? Number(newProd.brand_id) : null,
+  //   };
+  //   const response = await api.post<Product>("/products/", payload);
+  //   const enriched = enrichProductWithRelationNames(response, categories, brands);
+  //   setProducts((prev) => [enriched, ...prev]);
+  // };
+
+  // const updateProduct = async (id: number | string, updatedFields: Partial<Product>) => {
+  //   const payload = {
+  //     ...updatedFields,
+  //     ...(updatedFields.category_id !== undefined && {
+  //       category_id: updatedFields.category_id ? Number(updatedFields.category_id) : null,
+  //     }),
+  //     ...(updatedFields.brand_id !== undefined && {
+  //       brand_id: updatedFields.brand_id ? Number(updatedFields.brand_id) : null,
+  //     }),
+  //   };
+  //   const response = await api.patch<Product>(`/products/${id}/`, payload);
+  //   const enriched = enrichProductWithRelationNames(response, categories, brands);
+  //   setProducts((prev) => prev.map((p) => (p.id === id ? enriched : p)));
+  // };
+  // Inside AdminProvider implementation:
+  const addProduct = async (newProd: FormData | Record<string, any>) => {
+    const response = await api.post<Product>("/products/", newProd);
     const enriched = enrichProductWithRelationNames(response, categories, brands);
     setProducts((prev) => [enriched, ...prev]);
   };
 
-  const updateProduct = async (id: number | string, updatedFields: Partial<Product>) => {
-    const payload = {
-      ...updatedFields,
-      ...(updatedFields.category_id !== undefined && {
-        category_id: updatedFields.category_id ? Number(updatedFields.category_id) : null,
-      }),
-      ...(updatedFields.brand_id !== undefined && {
-        brand_id: updatedFields.brand_id ? Number(updatedFields.brand_id) : null,
-      }),
-    };
-    const response = await api.patch<Product>(`/products/${id}/`, payload);
+  const updateProduct = async (id: number | string, updatedFields: FormData | Record<string, any>) => {
+    const response = await api.patch<Product>(`/products/${id}/`, updatedFields);
     const enriched = enrichProductWithRelationNames(response, categories, brands);
     setProducts((prev) => prev.map((p) => (p.id === id ? enriched : p)));
   };
-
   const deleteProduct = async (id: number | string) => {
     await api.delete(`/products/${id}/`);
     setProducts((prev) => prev.filter((p) => p.id !== id));

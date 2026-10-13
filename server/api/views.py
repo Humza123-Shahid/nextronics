@@ -1,3 +1,4 @@
+import re
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import viewsets
 from .models import User, Address, Category, Brand, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
@@ -85,3 +86,32 @@ class NotificationViewSet(viewsets.ModelViewSet):
 class PageVisitViewSet(viewsets.ModelViewSet):
     queryset = PageVisit.objects.all()
     serializer_class = PageVisitSerializer
+
+    def perform_create(self, serializer):
+        # 1. Get the User-Agent string from request headers
+        user_agent = self.request.META.get('HTTP_USER_AGENT', '').lower()
+        
+        # 2. Match the string against common mobile and tablet patterns
+        if re.search(r'(tablet|ipad|playbook|silk)|(android(?!.*mobile))', user_agent):
+            detected_device = 'Tablet'
+        elif re.search(r'(mobile|iphone|ipod|blackberry|android|kindle|opera mini|opera mobi)', user_agent):
+            detected_device = 'Mobile'
+        else:
+            detected_device = 'Desktop' if user_agent else 'Unknown'
+
+        # 3. Extract client IP address
+        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = self.request.META.get('REMOTE_ADDR')
+
+        # 4. Associate authenticated user if available
+        user = self.request.user if self.request.user.is_authenticated else None
+
+        # 5. Save the data to the database
+        serializer.save(
+            device_type=detected_device,
+            ip_address=ip,
+            user=user
+        )

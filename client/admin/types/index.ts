@@ -36,6 +36,8 @@ export interface Product {
   weight_kg?: number | null;
   dimensions?: ProductDimensions | null;
   stock_quantity: number;
+  sales_count: number;
+  image?: string | null;
   is_active: boolean;
   is_featured: boolean;
   status: ProductStatus;
@@ -365,5 +367,6 @@ export interface PageVisit {
   session_key?: string;
   path: string;
   ip_address?: string;
+  device_type: string;
   visited_at?: string;
 }

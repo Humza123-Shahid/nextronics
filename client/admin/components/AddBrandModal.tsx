@@ -3,7 +3,14 @@
 import React, { useState } from "react";
 import { X, Plus, Award, Upload } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
-
+const generateSlug = (text: string) => {
+    return text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+};
 export default function AddBrandModal() {
     const { isAddBrandModalOpen, setIsAddBrandModalOpen, addBrand } = useAdmin();
 
@@ -45,10 +52,11 @@ export default function AddBrandModal() {
             const payload = new FormData();
             payload.append("name", formData.name.trim());
 
-            if (formData.slug.trim()) {
-                payload.append("slug", formData.slug.trim());
-            }
-
+            // if (formData.slug.trim()) {
+            //     payload.append("slug", formData.slug.trim());
+            // }
+            const finalSlug = formData.slug.trim() ? formData.slug.trim() : generateSlug(formData.name);
+            payload.append("slug", finalSlug);
             payload.append("description", formData.description.trim());
 
             if (logoFile) {

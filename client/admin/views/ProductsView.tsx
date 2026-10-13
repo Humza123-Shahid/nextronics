@@ -107,6 +107,7 @@ export default function ProductsView() {
                   <th className="py-4 px-4 sm:px-6">SKU</th>
                   <th className="py-4 px-4 sm:px-6">Price</th>
                   <th className="py-4 px-4 sm:px-6">Stock</th>
+                  <th className="py-4 px-4 sm:px-6">Sales</th>
                   <th className="py-4 px-4 sm:px-6">Status</th>
                   <th className="py-4 px-4 sm:px-6 text-right">Actions</th>
                 </tr>
@@ -129,15 +130,31 @@ export default function ProductsView() {
 
                     return (
                       <tr key={p.id} className="hover:bg-[#1C2434]/60 transition-colors">
-                        <td className="py-4 px-4 sm:px-6">
+                        {/* <td className="py-4 px-4 sm:px-6">
                           <div>
                             <p className="font-semibold text-white truncate text-xs sm:text-sm">
                               {p.name}
                             </p>
                             <p className="text-[11px] text-[#8A99AD]">{p.slug}</p>
                           </div>
+                        </td> */}
+                        <td className="py-4 px-4 sm:px-6">
+                          <div className="flex items-center gap-3">
+                            {p.image ? (
+                              <img src={p.image} alt={p.name} className="h-10 w-10 rounded-lg object-cover shrink-0 border border-[#2E3A47]" />
+                            ) : (
+                              <div className="h-10 w-10 rounded-lg bg-[#1C2434] flex items-center justify-center text-[#8A99AD] text-xs shrink-0 border border-[#2E3A47]">
+                                Img
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-semibold text-white truncate text-xs sm:text-sm">
+                                {p.name}
+                              </p>
+                              <p className="text-[11px] text-[#8A99AD]">{p.slug}</p>
+                            </div>
+                          </div>
                         </td>
-
                         <td className="py-4 px-4 sm:px-6 font-mono text-xs text-[#8A99AD]">
                           {p.sku}
                         </td>
@@ -154,7 +171,9 @@ export default function ProductsView() {
                         <td className="py-4 px-4 sm:px-6 text-xs text-white">
                           {p.stock_quantity} units
                         </td>
-
+                        <td className="py-4 px-4 sm:px-6 text-xs text-white">
+                          {p.sales_count ?? 0} sold
+                        </td>
                         <td className="py-4 px-4 sm:px-6">
                           <span
                             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border uppercase ${statusBadge}`}
@@ -207,6 +226,16 @@ export default function ProductsView() {
               key={p.id}
               className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-4 shadow-md flex flex-col justify-between hover:border-blue-500/50 transition-all"
             >
+              <div className="relative mb-3 h-32 w-full rounded-lg bg-[#1C2434] overflow-hidden border border-[#2E3A47]">
+                {p.image ? (
+                  <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-[#8A99AD]">No Image</div>
+                )}
+                <span className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white">
+                  {p.sales_count ?? 0} sold
+                </span>
+              </div>
               <div>
                 <div className="flex items-center justify-between text-xs text-[#8A99AD] font-mono mb-2">
                   <span>{p.sku}</span>

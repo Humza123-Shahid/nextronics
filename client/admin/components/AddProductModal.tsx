@@ -4,6 +4,14 @@ import React, { useState } from "react";
 import { X, Plus, PackagePlus } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
 
+const generateSlug = (text: string) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
 // Converts a string like "35.5 x 24.8 x 1.68" or JSON into a valid JSON object for Django
 const parseDimensionsInput = (input: string) => {
   if (!input || !input.trim()) return null;
@@ -31,6 +39,8 @@ export default function AddProductModal() {
     name: "",
     slug: "",
     sku: "",
+    image: null as File | null, // <-- Changed to File
+    sales_count: "0",
     category: "",
     brand: "",
     price: "",
@@ -64,53 +74,124 @@ export default function AddProductModal() {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setFormData((prev) => ({ ...prev, image: file }));
+    }
+  };
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setIsSubmitting(true);
+  //   setErrorMsg(null);
 
+  //   try {
+  //     // Safely parse JSON attributes
+  //     let parsedAttributes = null;
+  //     if (formData.attributes.trim()) {
+  //       try {
+  //         parsedAttributes = JSON.parse(formData.attributes);
+  //       } catch {
+  //         parsedAttributes = formData.attributes;
+  //       }
+  //     }
+
+  //     // Build payload matching Django REST framework specs
+  //     const payload: any = {
+  //       name: formData.name,
+  //       slug: formData.slug.trim() || undefined,
+  //       sku: formData.sku,
+  //       image: formData.image || "", // <-- Add this
+  //       sales_count: Number(formData.sales_count) || 0, // <-- Add this
+  //       price: Number(formData.price),
+  //       stock_quantity: Number(formData.stock_quantity) || 0,
+  //       status: formData.status,
+  //       is_active: formData.is_active,
+  //       is_featured: formData.is_featured,
+  //       tax_class: formData.tax_class || "standard",
+  //       short_description: formData.short_description || "",
+  //       description: formData.description || "",
+  //     };
+
+  //     // Foreign Keys (pass number or null)
+  //     if (formData.category) payload.category = Number(formData.category);
+  //     if (formData.brand) payload.brand = Number(formData.brand);
+
+  //     // Optional Numeric Fields
+  //     if (formData.compare_at_price) payload.compare_at_price = Number(formData.compare_at_price);
+  //     if (formData.cost_price) payload.cost_price = Number(formData.cost_price);
+  //     if (formData.weight_kg) payload.weight_kg = Number(formData.weight_kg);
+
+  //     // Formatted Objects
+  //     if (formData.dimensions) payload.dimensions = parseDimensionsInput(formData.dimensions);
+  //     if (parsedAttributes) payload.attributes = parsedAttributes;
+
+  //     if (addProduct) {
+  //       await addProduct(payload);
+  //     }
+
+  //     setIsAddProductModalOpen(false);
+  //   } catch (err: any) {
+  //     console.error("Add Product Error:", err);
+  //     setErrorMsg(err.message || "Failed to add product. Check backend validations.");
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMsg(null);
 
     try {
-      // Safely parse JSON attributes
-      let parsedAttributes = null;
+      // Build FormData for multipart file uploads
+      const data = new FormData();
+      data.append("name", formData.name);
+      //if (formData.slug.trim()) data.append("slug", formData.slug.trim());
+      const finalSlug = formData.slug.trim() ? formData.slug.trim() : generateSlug(formData.name);
+      data.append("slug", finalSlug);
+      data.append("sku", formData.sku);
+      data.append("sales_count", String(Number(formData.sales_count) || 0));
+      data.append("price", String(Number(formData.price)));
+      data.append("stock_quantity", String(Number(formData.stock_quantity) || 0));
+      data.append("status", formData.status);
+      data.append("is_active", String(formData.is_active));
+      data.append("is_featured", String(formData.is_featured));
+      data.append("tax_class", formData.tax_class || "standard");
+      data.append("short_description", formData.short_description || "");
+      data.append("description", formData.description || "");
+
+      // Append actual File object if selected
+      if (formData.image instanceof File) {
+        data.append("image", formData.image);
+      }
+
+      // Foreign Keys
+      if (formData.category) data.append("category", formData.category);
+      if (formData.brand) data.append("brand", formData.brand);
+
+      // Optional Numeric Fields
+      if (formData.compare_at_price) data.append("compare_at_price", formData.compare_at_price);
+      if (formData.cost_price) data.append("cost_price", formData.cost_price);
+      if (formData.weight_kg) data.append("weight_kg", formData.weight_kg);
+
+      // Formatted Objects / JSON strings
+      if (formData.dimensions) {
+        const parsedDims = parseDimensionsInput(formData.dimensions);
+        if (parsedDims) data.append("dimensions", JSON.stringify(parsedDims));
+      }
+
       if (formData.attributes.trim()) {
         try {
-          parsedAttributes = JSON.parse(formData.attributes);
+          const parsedAttrs = JSON.parse(formData.attributes);
+          data.append("attributes", JSON.stringify(parsedAttrs));
         } catch {
-          parsedAttributes = formData.attributes;
+          data.append("attributes", formData.attributes);
         }
       }
 
-      // Build payload matching Django REST framework specs
-      const payload: any = {
-        name: formData.name,
-        slug: formData.slug.trim() || undefined,
-        sku: formData.sku,
-        price: Number(formData.price),
-        stock_quantity: Number(formData.stock_quantity) || 0,
-        status: formData.status,
-        is_active: formData.is_active,
-        is_featured: formData.is_featured,
-        tax_class: formData.tax_class || "standard",
-        short_description: formData.short_description || "",
-        description: formData.description || "",
-      };
-
-      // Foreign Keys (pass number or null)
-      if (formData.category) payload.category = Number(formData.category);
-      if (formData.brand) payload.brand = Number(formData.brand);
-
-      // Optional Numeric Fields
-      if (formData.compare_at_price) payload.compare_at_price = Number(formData.compare_at_price);
-      if (formData.cost_price) payload.cost_price = Number(formData.cost_price);
-      if (formData.weight_kg) payload.weight_kg = Number(formData.weight_kg);
-
-      // Formatted Objects
-      if (formData.dimensions) payload.dimensions = parseDimensionsInput(formData.dimensions);
-      if (parsedAttributes) payload.attributes = parsedAttributes;
-
       if (addProduct) {
-        await addProduct(payload);
+        await addProduct(data);
       }
 
       setIsAddProductModalOpen(false);
@@ -121,7 +202,6 @@ export default function AddProductModal() {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl rounded-2xl border border-[#2E3A47] bg-[#1C2434] p-4 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -189,7 +269,30 @@ export default function AddProductModal() {
               />
             </div>
           </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Product Image File</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-1.5 text-white text-xs file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 focus:outline-none"
+              />
+              {formData.image && (
+                <p className="mt-1 text-[10px] text-emerald-400">Selected: {formData.image.name}</p>
+              )}
+            </div>
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Sales Count</label>
+              <input
+                type="number"
+                name="sales_count"
+                value={formData.sales_count}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+          </div>
           {/* Row 2: Category & Brand */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

@@ -10,7 +10,7 @@ export default function TopProducts() {
 
   // Sort by salesCount descending
   const topProducts = [...products]
-    .sort((a, b) => b.salesCount - a.salesCount)
+    .sort((a, b) => b.sales_count - a.sales_count)
     .slice(0, 5);
 
   return (
@@ -38,7 +38,7 @@ export default function TopProducts() {
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-xs font-bold text-[#8A99AD] w-4">{idx + 1}.</span>
               <img
-                src={p.image}
+                src={p.image!}
                 alt={p.name}
                 className="h-10 w-10 rounded-lg object-contain bg-[#1C2434] p-1 border border-[#2E3A47] shrink-0"
               />
@@ -50,10 +50,10 @@ export default function TopProducts() {
 
             <div className="text-right shrink-0">
               <span className="block text-xs sm:text-sm font-bold text-white">
-                ${(p.price * p.salesCount).toLocaleString()}
+                ${(p.price * p.sales_count).toLocaleString()}
               </span>
               <span className="text-[11px] text-emerald-400">
-                {p.salesCount} sold
+                {p.sales_count} sold
               </span>
             </div>
           </div>

@@ -155,6 +155,14 @@ export default function ViewProductModal() {
                 {product.sales_count ?? 0} <span className="text-xs font-normal text-[#8A99AD]">sold</span>
               </span>
             </div>
+
+            {/* Add Rating Card below */}
+            <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-3">
+              <span className="text-[10px] sm:text-[11px] text-[#8A99AD] block uppercase font-medium">Rating</span>
+              <span className="text-base sm:text-xl font-bold text-white mt-0.5 block truncate flex items-center gap-1">
+                ⭐ {Number(product.rating ?? 0).toFixed(1)} <span className="text-xs font-normal text-[#8A99AD]">({product.rating_count ?? 0})</span>
+              </span>
+            </div>
             <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-3">
               <span className="text-[10px] sm:text-[11px] text-[#8A99AD] block uppercase font-medium">Compare At</span>
               <span className="text-base sm:text-xl font-bold text-slate-300 mt-0.5 block truncate">

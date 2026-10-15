@@ -11,47 +11,95 @@ import {
     SlidersHorizontal,
 } from "lucide-react";
 import Image from "next/image";
+
+
+interface Category {
+    id: number;
+    name: string;
+}
+
 interface Product {
     id: number;
     name: string;
-    category: string;
+    category: number;
     price: number;
-    oldPrice?: number;
+    compare_at_price?: number;
     rating: number;
     image: string;
     tag?: "SALE" | "NEW";
 }
-
-const PRODUCTS: Product[] = [
-    { id: 1, name: "UltraBook Pro 14", category: "Computer & Laptop", price: 1199, oldPrice: 1399, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3D5SqNz61h8803-dEgjP_9QtqBpXCk4dsbHj-PBJWDw&s=10", tag: "SALE" },
-    { id: 2, name: "Studio Wireless Headphones", category: "Audio", price: 199, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSYGxpZiFUrSUfNAoQYkZrjI_xfzux-t7RuutBrxjazvQ&s=10" },
-    { id: 3, name: "Nova X Smartphone", category: "Smartphone", price: 799, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYxjkDx2NCBxFgIlGx4gkGaQiqGCPKONHlZQF8IQwTIg&s=10", tag: "NEW" },
-    { id: 4, name: "Mirrorless Camera 24MP", category: "Cameras", price: 949, oldPrice: 1099, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaub1hYkZvCaoIU6lTCgIGid1LSkTFaOHu7QbUquPLCg&s=10", tag: "SALE" },
-    { id: 5, name: "Pulse Smart Watch", category: "Watches", price: 249, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS55YHww88ZBsjCoQiPJFekOnG3nsJ8pzJIHjo1gMKT8w&s=10", tag: "NEW" },
-    { id: 6, name: "Console Controller Elite", category: "Video Games", price: 69, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgoWqV1VTC9UFC96MlcoJ56wPewOnKRDyT8OWQ6dhCLw&s=10" },
-    { id: 7, name: "Boom Bluetooth Speaker", category: "Audio", price: 89, oldPrice: 119, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3cT9dgE9AMGwVRMtluxwyTUv0iRZHKL9Of0T5cybh0g&s=10", tag: "SALE" },
-    { id: 8, name: '4K Smart TV 55"', category: "Home Appliances", price: 649, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_W1pERFJT02jqUlJjDQ-6f0NlTqaFeRsfZsDkq_K8mA&s=10" },
-    { id: 9, name: "Gaming Laptop RX", category: "Computer & Laptop", price: 1499, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQlcerMjzsf8lbfFOmCe2nkzuTR8txDzxje_t2gGA6T8w&s=10", tag: "NEW" },
-    { id: 10, name: "Compact Earbuds", category: "Audio", price: 59, rating: 3, image: "https://png.pngtree.com/png-vector/20250429/ourmid/pngtree-stylish-white-wireless-earbuds-in-a-charging-case-on-transparent-background-png-image_16139566.png" },
-    { id: 11, name: "Nova Lite Smartphone", category: "Smartphone", price: 399, oldPrice: 449, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyuVyXVj2A0VVhisxjytO6W4WvTWzeBemgsXjNqrJh2g&s=10", tag: "SALE" },
-    { id: 12, name: "Action Camera 5K", category: "Cameras", price: 329, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbM58cWesd0HyoglUX9MeBjmS0Me4fWoRmt6NTsfdGpQ&s=10" },
-];
-
-const CATEGORIES = ["All", ...Array.from(new Set(PRODUCTS.map((p) => p.category))).sort()];
+// const PRODUCTS: Product[] = [
+//     { id: 1, name: "UltraBook Pro 14", category: "Computer & Laptop", price: 1199, oldPrice: 1399, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3D5SqNz61h8803-dEgjP_9QtqBpXCk4dsbHj-PBJWDw&s=10", tag: "SALE" },
+//     { id: 2, name: "Studio Wireless Headphones", category: "Audio", price: 199, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSYGxpZiFUrSUfNAoQYkZrjI_xfzux-t7RuutBrxjazvQ&s=10" },
+//     { id: 3, name: "Nova X Smartphone", category: "Smartphone", price: 799, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYxjkDx2NCBxFgIlGx4gkGaQiqGCPKONHlZQF8IQwTIg&s=10", tag: "NEW" },
+//     { id: 4, name: "Mirrorless Camera 24MP", category: "Cameras", price: 949, oldPrice: 1099, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaub1hYkZvCaoIU6lTCgIGid1LSkTFaOHu7QbUquPLCg&s=10", tag: "SALE" },
+//     { id: 5, name: "Pulse Smart Watch", category: "Watches", price: 249, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS55YHww88ZBsjCoQiPJFekOnG3nsJ8pzJIHjo1gMKT8w&s=10", tag: "NEW" },
+//     { id: 6, name: "Console Controller Elite", category: "Video Games", price: 69, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgoWqV1VTC9UFC96MlcoJ56wPewOnKRDyT8OWQ6dhCLw&s=10" },
+//     { id: 7, name: "Boom Bluetooth Speaker", category: "Audio", price: 89, oldPrice: 119, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3cT9dgE9AMGwVRMtluxwyTUv0iRZHKL9Of0T5cybh0g&s=10", tag: "SALE" },
+//     { id: 8, name: '4K Smart TV 55"', category: "Home Appliances", price: 649, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_W1pERFJT02jqUlJjDQ-6f0NlTqaFeRsfZsDkq_K8mA&s=10" },
+//     { id: 9, name: "Gaming Laptop RX", category: "Computer & Laptop", price: 1499, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQlcerMjzsf8lbfFOmCe2nkzuTR8txDzxje_t2gGA6T8w&s=10", tag: "NEW" },
+//     { id: 10, name: "Compact Earbuds", category: "Audio", price: 59, rating: 3, image: "https://png.pngtree.com/png-vector/20250429/ourmid/pngtree-stylish-white-wireless-earbuds-in-a-charging-case-on-transparent-background-png-image_16139566.png" },
+//     { id: 11, name: "Nova Lite Smartphone", category: "Smartphone", price: 399, oldPrice: 449, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRyuVyXVj2A0VVhisxjytO6W4WvTWzeBemgsXjNqrJh2g&s=10", tag: "SALE" },
+//     { id: 12, name: "Action Camera 5K", category: "Cameras", price: 329, rating: 4, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbM58cWesd0HyoglUX9MeBjmS0Me4fWoRmt6NTsfdGpQ&s=10" },
+// ];
 
 type Sort = "default" | "price-asc" | "price-desc" | "rating";
-
-const resolveCategory = (param: string | null) =>
-    CATEGORIES.find((c) => c.toLowerCase() === param?.toLowerCase()) ?? "All";
 
 export default function ShopSection() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
+    const [products, setProducts] = useState<Product[]>([]);
+    // 1. Add state to hold your raw categories list from the DB
+    const [dbCategories, setDbCategories] = useState<Category[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // 2. Fetch both endpoints simultaneously using Promise.all
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                setIsLoading(true);
+                const [productsRes, categoriesRes] = await Promise.all([
+                    fetch("http://127.0.0.1:8080/api/products"),
+                    fetch("http://127.0.0.1:8080/api/categories") // Your category table API
+                ]);
+
+                if (!productsRes.ok || !categoriesRes.ok) {
+                    throw new Error("Failed to fetch shop data");
+                }
+
+                const productsData = await productsRes.json();
+                const categoriesData = await categoriesRes.json();
+
+                setProducts(productsData);
+                setDbCategories(categoriesData);
+            } catch (err: any) {
+                setError(err.message || "Something went wrong");
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        fetchData();
+    }, []);
+
+    // 3. Create a helper Map or lookup object to easily find category names by ID
+    const categoryMap = useMemo(() => {
+        const map = new Map<number, string>();
+        dbCategories.forEach(cat => map.set(cat.id, cat.name));
+        return map;
+    }, [dbCategories]);
+
+    // 4. Derive unique string names for your sidebar filter
+    const categories = useMemo(() => {
+        if (dbCategories.length === 0) return ["All"];
+        return ["All", ...dbCategories.map(c => c.name).sort()];
+    }, [dbCategories]);
+
     const categoryParam = searchParams.get("category");
-    const category =
-        CATEGORIES.find((c) => c.toLowerCase() === categoryParam?.toLowerCase()) ?? "All";
+    const category = categories.find((c) => c.toLowerCase() === categoryParam?.toLowerCase()) ?? "All";
 
     const setCategory = (c: string) => {
         router.replace(c === "All" ? pathname : `${pathname}?category=${encodeURIComponent(c)}`, {
@@ -59,30 +107,37 @@ export default function ShopSection() {
         });
     };
 
-    console.log("categoryParam:", categoryParam, "| category:", category);
-
     const [query, setQuery] = useState("");
     const [sort, setSort] = useState<Sort>("default");
-    const [maxPrice, setMaxPrice] = useState(1500);
+    const [maxPrice, setMaxPrice] = useState(15000);
     const [wishlist, setWishlist] = useState<number[]>([]);
     const [filtersOpen, setFiltersOpen] = useState(false);
 
+    // 5. Update filter logic to cross-reference the foreign key
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase();
-        const list = PRODUCTS.filter(
-            (p) =>
-                (category === "All" || p.category === category) &&
+        const list = [...products].filter((p) => {
+            // Find the string name belonging to this specific product's foreign key
+            const productCategoryName = categoryMap.get(p.category) || "Uncategorized";
+
+            return (
+                (category === "All" || productCategoryName === category) &&
                 p.price <= maxPrice &&
                 (!q || p.name.toLowerCase().includes(q))
-        );
+            );
+        });
+
         if (sort === "price-asc") list.sort((a, b) => a.price - b.price);
         if (sort === "price-desc") list.sort((a, b) => b.price - a.price);
         if (sort === "rating") list.sort((a, b) => b.rating - a.rating);
         return list;
-    }, [category, query, sort, maxPrice]);
-
+    }, [products, category, categoryMap, query, sort, maxPrice]);
     const toggleWish = (id: number) =>
         setWishlist((w) => (w.includes(id) ? w.filter((x) => x !== id) : [...w, id]));
+
+    // 5. Add loading and error layout state checks
+    if (isLoading) return <div className="text-center py-20 font-semibold">Loading products...</div>;
+    if (error) return <div className="text-center py-20 text-red-500 font-semibold">Error: {error}</div>;
 
     return (
         <section className="bg-slate-50 dark:bg-[#090d18] text-slate-900 dark:text-slate-100 py-10 sm:py-14">
@@ -105,7 +160,7 @@ export default function ShopSection() {
                         <div>
                             <h2 className="text-sm font-bold mb-3">Categories</h2>
                             <ul className="flex lg:flex-col flex-wrap gap-2 lg:gap-0 lg:divide-y divide-slate-200 dark:divide-slate-800 lg:rounded-xl lg:border border-slate-200 dark:border-slate-800 lg:bg-white dark:lg:bg-[#0c101d] lg:overflow-hidden">
-                                {CATEGORIES.map((c) => (
+                                {categories.map((c) => (
                                     <li key={c}>
                                         <button
                                             type="button"
@@ -145,7 +200,7 @@ export default function ShopSection() {
                 <div>
                     <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-6">
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Showing <strong className="text-slate-900 dark:text-white">{visible.length}</strong> of {PRODUCTS.length} products
+                            Showing <strong className="text-slate-900 dark:text-white">{visible.length}</strong> of {products.length} products
                         </p>
                         <div className="flex flex-col min-[480px]:flex-row gap-3">
                             <div className="flex flex-1 items-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:border-blue-600 px-3">
@@ -193,6 +248,7 @@ export default function ShopSection() {
                             {visible.map((p) => {
                                 // const Icon = p.icon;
                                 const wished = wishlist.includes(p.id);
+                                const productCategoryName = categoryMap.get(p.category) || "Uncategorized";
                                 return (
                                     <li
                                         key={p.id}
@@ -204,14 +260,21 @@ export default function ShopSection() {
                                                 alt={p.name}
 
                                             />
-                                            {p.tag && (
+                                            {/* {p.compare_at_price && (
                                                 <span
-                                                    className={`absolute top-3 left-3 z-10 text-[10px] font-black px-2 py-0.5 rounded ${p.tag === "SALE" ? "bg-orange-500 text-white" : "bg-cyan-500 text-slate-900"
-                                                        }`}
+                                                    className={`absolute top-3 left-3 z-10 text-[10px] font-black px-2 py-0.5 rounded bg-orange-500 text-white`}
                                                 >
-                                                    {p.tag}
+                                                    SALE
                                                 </span>
-                                            )}
+                                            )} */}
+                                            {p.compare_at_price! > 0 ?
+                                                <span
+                                                    className={`absolute top-3 left-3 z-10 text-[10px] font-black px-2 py-0.5 rounded bg-orange-500 text-white`}
+                                                >
+                                                    SALE
+                                                </span>
+                                                : null}
+
                                             <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100">
                                                 <button
                                                     type="button"
@@ -233,7 +296,7 @@ export default function ShopSection() {
                                         </div>
 
                                         <div className="p-4 flex flex-col gap-2 flex-1">
-                                            <span className="text-xs text-slate-500 dark:text-slate-400">{p.category}</span>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">{productCategoryName}</span>
                                             <h3 className="text-sm font-bold leading-snug">{p.name}</h3>
                                             <div className="flex" aria-label={`Rated ${p.rating} out of 5`}>
                                                 {Array.from({ length: 5 }).map((_, i) => (
@@ -245,11 +308,15 @@ export default function ShopSection() {
                                                 ))}
                                             </div>
                                             <div className="mt-auto pt-2 flex flex-wrap items-center justify-between gap-2">
-                                                <div className="flex items-baseline gap-2">
+                                                {/* <div className="flex items-baseline gap-2"> */}
+                                                <div className="flex flex-col">
                                                     <span className="font-black text-blue-600 dark:text-cyan-400">${p.price}</span>
-                                                    {p.oldPrice && (
-                                                        <span className="text-xs text-slate-400 line-through">${p.oldPrice}</span>
-                                                    )}
+                                                    {/* {p.compare_at_price && (
+                                                        <span className="text-xs text-slate-400 line-through">${p.compare_at_price}</span>
+                                                    )} */}
+                                                    {p.compare_at_price! > 0 ?
+                                                        <span className="text-xs text-slate-400 line-through">${p.compare_at_price}</span>
+                                                        : null}
                                                 </div>
                                                 <button
                                                     type="button"

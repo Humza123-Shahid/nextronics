@@ -44,6 +44,7 @@ const CATEGORIES: CategoryItem[] = [
   { id: "smartphone", name: "Smartphone", href: shopHref("Smartphone") },
   { id: "video-games", name: "Video Games", href: shopHref("Video Games") },
   { id: "watches", name: "Watches", href: shopHref("Watches") },
+  { id: "gadgets", name: "Gadgets", href: shopHref("Gadgets") },
 ];
 
 const NAV_ITEMS = [

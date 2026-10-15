@@ -400,10 +400,16 @@
   gap: 0.4rem;
 }
 
+/* .stars {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+} */
 .stars {
   position: relative;
   display: inline-flex;
   line-height: 0;
+  user-select: none;
 }
 
 .starsBase,
@@ -412,7 +418,7 @@
   gap: 2px;
 }
 
-.starsFill {
+/* .starsFill {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -426,6 +432,31 @@
 .stars svg {
   width: 13px;
   height: 13px;
+} */
+.starsBase {
+  display: flex;
+  color: var(--line);
+}
+
+.starsFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+  /* Prevents hidden stars from wrapping down */
+  color: var(--volt);
+  pointer-events: none;
+  /* Prevents visual clipping interactions */
+}
+
+.stars svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  /* Prevents SVGs from squishing horizontally */
 }
 
 .ratingCount {

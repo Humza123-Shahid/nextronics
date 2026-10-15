@@ -6,7 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
 
 export default function TopProducts() {
-  const { products } = useAdmin();
+  const { products, categories } = useAdmin();
 
   // Sort by salesCount descending
   const topProducts = [...products]
@@ -30,34 +30,36 @@ export default function TopProducts() {
       </div>
 
       <div className="divide-y divide-[#2E3A47]/60 mt-2">
-        {topProducts.map((p, idx) => (
-          <div
-            key={p.id}
-            className="flex items-center justify-between py-3.5 hover:bg-[#1C2434]/40 px-2 rounded-lg transition-colors"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="text-xs font-bold text-[#8A99AD] w-4">{idx + 1}.</span>
-              <img
-                src={p.image!}
-                alt={p.name}
-                className="h-10 w-10 rounded-lg object-contain bg-[#1C2434] p-1 border border-[#2E3A47] shrink-0"
-              />
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-semibold text-white truncate">{p.name}</p>
-                <span className="text-[11px] text-[#8A99AD]">{p.category}</span>
+        {topProducts.map((p, idx) => {
+          const category = categories.find((category) => category.id === p.category_id)
+          return (
+            <div
+              key={p.id}
+              className="flex items-center justify-between py-3.5 hover:bg-[#1C2434]/40 px-2 rounded-lg transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-xs font-bold text-[#8A99AD] w-4">{idx + 1}.</span>
+                <img
+                  src={p.image!}
+                  alt={p.name}
+                  className="h-10 w-10 rounded-lg object-contain bg-[#1C2434] p-1 border border-[#2E3A47] shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-semibold text-white truncate">{p.name}</p>
+                  <span className="text-[11px] text-[#8A99AD]">{category?.name}</span>
+                </div>
               </div>
-            </div>
 
-            <div className="text-right shrink-0">
-              <span className="block text-xs sm:text-sm font-bold text-white">
-                ${(p.price * p.sales_count).toLocaleString()}
-              </span>
-              <span className="text-[11px] text-emerald-400">
-                {p.sales_count} sold
-              </span>
-            </div>
-          </div>
-        ))}
+              <div className="text-right shrink-0">
+                <span className="block text-xs sm:text-sm font-bold text-white">
+                  ${(p.price * p.sales_count).toLocaleString()}
+                </span>
+                <span className="text-[11px] text-emerald-400">
+                  {p.sales_count} sold
+                </span>
+              </div>
+            </div>)
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useMemo } from 'react';
 // import { MONTHLY_SALES_DATA, CATEGORY_METRICS } from "../data/mockData";
 import { useAdmin } from "../context/AdminContext";
 
@@ -298,9 +299,67 @@ export function RevenueSalesChart() {
 }
 
 export function ProfitAnalyticsChart() {
+  const { orders } = useAdmin();
+  const validOrders = orders.filter(
+    (order: any) =>
+      (order.payment_status === "paid" || order.status === "delivered") &&
+
+      order.status !== "cancelled" &&
+      order.status !== "refunded"
+  );
   const months = ["M", "T", "W", "T", "F", "S", "S"];
-  const revenueValues = [44, 55, 41, 67, 22, 43, 65];
-  const salesValues = [13, 23, 20, 8, 13, 27, 18];
+  const { revenueValues, salesValues } = useMemo(() => {
+    const rev = [0, 0, 0, 0, 0, 0, 0];
+    const sal = [0, 0, 0, 0, 0, 0, 0];
+
+    // Helper to map JS getDay() (0=Sun, 1=Mon...) to your Monday-start array (0=Mon, ..., 6=Sun)
+    const getDayIndex = (jsDay: number) => (jsDay === 0 ? 6 : jsDay - 1);
+
+    // 1. Calculate boundaries for the PREVIOUS week (Monday to Sunday)
+    const now = new Date();
+
+    // Find current day of week (0 for Sun, 1 for Mon, etc.)
+    const currentDayOfWeek = now.getDay();
+    const distanceToCurrentMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+
+    // Start of this week (Monday 00:00:00)
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setDate(now.getDate() - distanceToCurrentMonday);
+    startOfThisWeek.setHours(0, 0, 0, 0);
+
+    // Start of previous week (Last Monday 00:00:00)
+    const startOfPrevWeek = new Date(startOfThisWeek);
+    startOfPrevWeek.setDate(startOfThisWeek.getDate() - 7);
+
+    // End of previous week (Last Sunday 23:59:59)
+    const endOfPrevWeek = new Date(startOfThisWeek);
+    endOfPrevWeek.setMilliseconds(-1); // Just before this Monday starts
+
+    // 2. Iterate through orders and filter for the previous week
+    validOrders.forEach((order) => {
+      const dateStr = order.placed_at || order.created_at;
+      if (!dateStr) return;
+
+      const orderDate = new Date(dateStr);
+
+      // Check if the order falls within the previous week range
+      if (orderDate >= startOfPrevWeek && orderDate <= endOfPrevWeek) {
+        const dayIndex = getDayIndex(orderDate.getDay());
+        const grandTotal = Number(order.grand_total) || 0;
+        const subTotal = Number(order.subtotal) || 0;
+        // Add to revenue values
+        rev[dayIndex] += grandTotal;
+
+        // Add to sales values (using grand total currency value instead of count)
+        sal[dayIndex] += subTotal;
+        // Note: If "sales" means subtotal or another field, replace `grandTotal` with `Number(order.subtotal) || 0`
+      }
+    });
+
+    return { revenueValues: rev, salesValues: sal };
+  }, [orders]);
+  // const revenueValues = [44, 55, 41, 67, 22, 43, 65];
+  // const salesValues = [13, 23, 20, 8, 13, 27, 18];
 
   return (
     <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-5 sm:p-7.5 shadow-md flex flex-col justify-between">
@@ -330,8 +389,17 @@ export function ProfitAnalyticsChart() {
         {/* Bar comparison */}
         <div className="mt-6 flex h-48 items-end justify-between gap-2 pt-6">
           {months.map((day, idx) => {
-            const revHeight = (revenueValues[idx] / 70) * 100;
-            const salesHeight = (salesValues[idx] / 70) * 100;
+            let selectedMax = 0;
+            const maxRevenue: number = Math.max(...revenueValues);
+            const maxSales: number = Math.max(...salesValues);
+            if (maxRevenue >= maxSales) {
+              selectedMax = maxRevenue
+            }
+            else {
+              selectedMax = maxSales
+            }
+            const revHeight = (revenueValues[idx] / selectedMax) * 100;
+            const salesHeight = (salesValues[idx] / selectedMax) * 100;
 
             return (
               <div key={idx} className="flex flex-1 flex-col items-center gap-2 h-full justify-end">

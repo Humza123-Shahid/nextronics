@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import {
   motion,
@@ -24,82 +24,118 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+// export interface CategoryItem {
+//   id: string;
+//   name: string;
+//   count: string;
+//   image: string;
+//   href: string;
+//   badge?: string;
+//   icon: React.ComponentType<{ className?: string }>;
+// }
 export interface CategoryItem {
-  id: string;
+  id: number | string;
   name: string;
-  count: string;
+  slug: string;
+  parent_id: string | number;
+  description: string;
   image: string;
-  href: string;
-  badge?: string;
-  icon: React.ComponentType<{ className?: string }>;
+  is_active: boolean;
 }
-
-const CATEGORIES: CategoryItem[] = [
-  {
-    id: "air-conditioner",
-    name: "Air conditioner",
-    count: "4 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-06.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/air-conditioner/?customize=template",
-    icon: Wind,
-  },
-  {
-    id: "audio-video",
-    name: "Audio & video",
-    count: "5 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-08.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/audio-video/?customize=template",
-    icon: Speaker,
-  },
-  {
-    id: "gadgets",
-    name: "Gadgets",
-    count: "6 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-02.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/gadgets/?customize=template",
-    icon: Smartphone,
-  },
-  {
-    id: "home-appliances",
-    name: "Home appliances",
-    count: "5 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-07.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/home-appliances/?customize=template",
-    icon: Sparkles,
-  },
-  {
-    id: "kitchen-appliances",
-    name: "Kitchen appliances",
-    count: "6 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-05.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/kitchen-appliances/?customize=template",
-    icon: CookingPot,
-  },
-  {
-    id: "pcs-laptop",
-    name: "PCs & laptop",
-    count: "4 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-03.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/pcs-laptop/?customize=template",
-    icon: Laptop,
-  },
-  {
-    id: "refrigerator",
-    name: "Refrigerator",
-    count: "4 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-04.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/refrigerator/?customize=template",
-    icon: Snowflake,
-  },
-  {
-    id: "smart-home",
-    name: "Smart home",
-    count: "5 Products",
-    image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-01.jpg",
-    href: "https://websitedemos.net/electronic-store-04/product-category/smart-home/?customize=template",
-    icon: Home,
-  },
-];
+export interface Product {
+  id: number | string;
+  name: string;
+  slug: string;
+  description: string;
+  short_description: string;
+  // Foreign Key IDs (Sent to backend DB)
+  category: string | number;
+  brand: string | number;
+  sku: string;
+  price: number;
+  compare_at_price: number | null;
+  cost_price: number | null;
+  tax_class: string;
+  weight_kg: number | null;
+  dimensions: Record<string, any> | null;
+  stock_quantity: number;
+  sales_count: number;
+  image: string | null;
+  is_active: boolean;
+  is_featured: boolean;
+  status: string;
+  meta_title?: string;
+  meta_description?: string;
+  attributes: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+}
+// const CATEGORIES: CategoryItem[] = [
+//   {
+//     id: "air-conditioner",
+//     name: "Air conditioner",
+//     count: "4 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-06.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/air-conditioner/?customize=template",
+//     icon: Wind,
+//   },
+//   {
+//     id: "audio-video",
+//     name: "Audio & video",
+//     count: "5 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-08.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/audio-video/?customize=template",
+//     icon: Speaker,
+//   },
+//   {
+//     id: "gadgets",
+//     name: "Gadgets",
+//     count: "6 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-02.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/gadgets/?customize=template",
+//     icon: Smartphone,
+//   },
+//   {
+//     id: "home-appliances",
+//     name: "Home appliances",
+//     count: "5 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-07.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/home-appliances/?customize=template",
+//     icon: Sparkles,
+//   },
+//   {
+//     id: "kitchen-appliances",
+//     name: "Kitchen appliances",
+//     count: "6 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-05.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/kitchen-appliances/?customize=template",
+//     icon: CookingPot,
+//   },
+//   {
+//     id: "pcs-laptop",
+//     name: "PCs & laptop",
+//     count: "4 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-03.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/pcs-laptop/?customize=template",
+//     icon: Laptop,
+//   },
+//   {
+//     id: "refrigerator",
+//     name: "Refrigerator",
+//     count: "4 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-04.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/refrigerator/?customize=template",
+//     icon: Snowflake,
+//   },
+//   {
+//     id: "smart-home",
+//     name: "Smart home",
+//     count: "5 Products",
+//     image: "https://websitedemos.net/electronic-store-04/wp-content/uploads/sites/1055/2022/03/electronic-store-category-image-01.jpg",
+//     href: "https://websitedemos.net/electronic-store-04/product-category/smart-home/?customize=template",
+//     icon: Home,
+//   },
+// ];
 
 /* ------------------------------------------------------------------ */
 /* Animation variants                                                  */
@@ -171,7 +207,55 @@ function DepartmentCounter({ value }: { value: number }) {
 /* Individual category card with mouse-tracked tilt                    */
 /* ------------------------------------------------------------------ */
 
-function CategoryCard({ category }: { category: CategoryItem }) {
+function CategoryCard({ category, products }: { category: CategoryItem; products: Product[] }) {
+  //const [products, setProducts] = useState<Product[]>([]);
+  //const [loading, setLoading] = useState<boolean>(true);
+  //const [error, setError] = useState<string | null>(null);
+  //let product_count = 0;
+  //const Icon = category.icon;
+  // useEffect(() => {
+  //   // Replace this URL with your actual Django API endpoint
+  //   const fetchProducts = async () => {
+  //     try {
+  //       const response = await fetch("http://127.0.0.1:8080/api/products/");
+  //       console.log(response);
+  //       if (!response.ok) {
+  //         throw new Error("Failed to fetch products data");
+  //       }
+  //       const data = await response.json();
+  //       setProducts(data);
+  //     } catch (err: any) {
+  //       setError(err.comment || "An error occurred");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchProducts();
+  // }, []);
+  // useEffect(() => {
+  //   // Replace this URL with your actual Django API endpoint
+  //   // product_count = products.filter((product) => {
+  //   //   category.id === product.category_id;
+  //   // }).length;
+  //   product_count = products.filter(
+  //     (product) => String(product.category_id) === String(category.id)
+  //   ).length;
+  // }, [products]);
+  //console.log(products)
+  // const product_count = products.filter(
+  //   (product) => {
+  //     console.log(product.category)
+  //     String(product.category) === String(category.id)
+  //   }
+  // ).length;
+  const product_count = products.filter((product) => {
+    return String(product.category) === String(category.id);
+  }).length;
+  // console.log(product_count)
+  const imageUrl = category.image?.startsWith("http")
+    ? category.image
+    : `http://127.0.0.1:8080${category.image || ""}`;
   const [hasError, setHasError] = useState(false);
   const cardRef = useRef<HTMLAnchorElement>(null);
 
@@ -203,14 +287,39 @@ function CategoryCard({ category }: { category: CategoryItem }) {
     mouseX.set(0);
     mouseY.set(0);
   };
-
-  const Icon = category.icon;
-
+  // let shopHref='';
+  // if(category.name=="Gadgets"){
+  //   shopHref="#most-popular";
+  // }
+  // else{
+  //     shopHref=(name:string)=>`/shop?category=${encodeURIComponent(category.name)}`;
+  // }
+  // Fix: Ensure shopHref is always a string URL
+  // let shopHref = "";
+  // if (category.name === "Gadgets") {
+  //   shopHref = `#most-popular`;
+  // } else {
+  //   shopHref = `/shop?category=${encodeURIComponent(category.name)}`;
+  // }
+  const shopHref = `/shop?category=${encodeURIComponent(category.name)}`;
+  // const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  //   if (category.name === "Gadgets") {
+  //     e.preventDefault();
+  //     const targetElement = document.getElementById("gadgets");
+  //     if (targetElement) {
+  //       targetElement.scrollIntoView({ behavior: "smooth" });
+  //       // Optionally update the URL hash without jumping page
+  //       window.history.pushState(null, "", "#gadgets");
+  //     }
+  //   }
+  // };
   return (
     <motion.div variants={cardVariants} style={{ perspective: 800 }}>
       <motion.a
         ref={cardRef}
-        href={category.href}
+        href={shopHref}
+        //href={category.href}
+        //onClick={handleClick}
         aria-label={`Visit product category ${category.name}`}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -234,19 +343,19 @@ function CategoryCard({ category }: { category: CategoryItem }) {
           className="relative w-full aspect-square max-w-[210px] mx-auto rounded-xl bg-[#070c18] border border-slate-800/80 p-3 sm:p-4 flex items-center justify-center overflow-hidden transition-colors duration-300 group-hover:border-blue-500/40 group-hover:bg-[#091022] shadow-inner"
         >
           {/* Category Icon Badge in top-right — pops in on hover */}
-          <motion.div
+          {/* <motion.div
             initial={{ scale: 1, rotate: 0 }}
             whileHover={{ scale: 1.15, rotate: 8 }}
             transition={{ type: "spring", stiffness: 400, damping: 15 }}
             className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-lg bg-slate-900/80 border border-slate-700/60 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 group-hover:border-cyan-500/40 transition-colors backdrop-blur-sm shadow"
           >
             <Icon className="w-3.5 h-3.5" />
-          </motion.div>
+          </motion.div> */}
 
           {/* Main Product Image */}
           {!hasError ? (
             <motion.img
-              src={category.image}
+              src={imageUrl}
               alt={category.name}
               width={300}
               height={300}
@@ -265,7 +374,7 @@ function CategoryCard({ category }: { category: CategoryItem }) {
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className="w-full h-full flex flex-col items-center justify-center gap-2 text-cyan-400/80"
             >
-              <Icon className="w-12 h-12 stroke-[1.5]" />
+              {/* <Icon className="w-12 h-12 stroke-[1.5]" /> */}
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
                 {category.name}
               </span>
@@ -304,7 +413,8 @@ function CategoryCard({ category }: { category: CategoryItem }) {
               transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
               className="w-1.5 h-1.5 rounded-full bg-cyan-400"
             />
-            {category.count}
+            {product_count}
+            {/* {category.count} */}
           </span>
         </div>
 
@@ -327,6 +437,51 @@ function CategoryCard({ category }: { category: CategoryItem }) {
 /* ------------------------------------------------------------------ */
 
 export default function ShopByCategory() {
+
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loading2, setLoading2] = useState<boolean>(true);
+  const [error2, setError2] = useState<string | null>(null);
+  useEffect(() => {
+    // Replace this URL with your actual Django API endpoint
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8080/api/categories/");
+        console.log(response);
+        if (!response.ok) {
+          throw new Error("Failed to fetch categories data");
+        }
+        const data = await response.json();
+        console.log(data);
+        setCategories(data);
+      } catch (err: any) {
+        setError(err.message || "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8080/api/products/");
+        console.log(response);
+        if (!response.ok) {
+          throw new Error("Failed to fetch products data");
+        }
+        const data = await response.json();
+        console.log(data);
+        setProducts(data);
+      } catch (err: any) {
+        setError2(err.message || "An error occurred");
+      } finally {
+        setLoading2(false);
+      }
+    };
+
+    fetchProducts();
+    fetchCategories();
+  }, []);
   return (
     <section
       className="mt-10 sm:mt-14 lg:mt-16 w-full"
@@ -384,7 +539,7 @@ export default function ShopByCategory() {
           className="flex items-center gap-2 self-start sm:self-auto"
         >
           <span className="text-xs font-semibold text-slate-400 bg-slate-800/60 border border-slate-700/60 px-3 py-1.5 rounded-lg">
-            <DepartmentCounter value={CATEGORIES.length} /> Departments Available
+            <DepartmentCounter value={categories.length} /> Departments Available
           </span>
         </motion.div>
       </motion.div>
@@ -397,8 +552,8 @@ export default function ShopByCategory() {
         viewport={{ once: true, amount: 0.15 }}
         className="mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6"
       >
-        {CATEGORIES.map((category) => (
-          <CategoryCard key={category.id} category={category} />
+        {categories.map((category) => (
+          <CategoryCard key={category.id} category={category} products={products} />
         ))}
       </motion.div>
     </section>

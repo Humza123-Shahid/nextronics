@@ -37,6 +37,8 @@ export interface Product {
   dimensions?: ProductDimensions | null;
   stock_quantity: number;
   sales_count: number;
+  rating: number;
+  rating_count: number;
   image?: string | null;
   is_active: boolean;
   is_featured: boolean;

@@ -75,6 +75,8 @@ export default function EditProductModal() {
     sku: "",
     image: "", // <-- Changed to File
     sales_count: 0, // <-- Add this
+    rating: 0,         // <-- Add this
+    rating_count: 0,   // <-- Add this
     category: "",
     brand: "",
     price: "",
@@ -116,6 +118,8 @@ export default function EditProductModal() {
         image: null, // Reset file state for clean editing; existing URL is tracked separately or handled by backend if unchanged
         existingImage: prod.image || "", // Keep track of current image URL
         sales_count: prod.sales_count ?? 0, // <-- Add this
+        rating: prod.rating ?? 0,               // <-- Add this
+        rating_count: prod.rating_count ?? 0,   // <-- Add this
         price: prod.price ?? "",
         compare_at_price: prod.compare_at_price ?? "",
         cost_price: prod.cost_price ?? "",
@@ -123,7 +127,8 @@ export default function EditProductModal() {
         weight_kg: prod.weight_kg ?? "",
         // Formatted to avoid [object Object]
         // dimensions: formatDimensionsForInput(prod.dimensions),
-        dimensions: prod.dimensions,
+        //dimensions: prod.dimensions,
+        dimensions: formatDimensionsForInput(prod.dimensions),
         attributes: formatAttributesForInput(prod.attributes),
       });
     }
@@ -199,6 +204,8 @@ export default function EditProductModal() {
       data.append("slug", finalSlug);
       data.append("sku", formData.sku);
       data.append("sales_count", String(Number(formData.sales_count) || 0));
+      data.append("rating", String(Number(formData.rating) || 0));             // <-- Add this
+      data.append("rating_count", String(Number(formData.rating_count) || 0)); // <-- Add this
       data.append("price", String(Number(formData.price)));
 
       if (formData.compare_at_price !== "" && formData.compare_at_price !== null) {
@@ -242,9 +249,20 @@ export default function EditProductModal() {
       //       : formData.dimensions
       //   );
       // }
-      if (formData.dimensions) {
+      // if (formData.dimensions) {
+      //   const parsedDims = parseDimensionsInput(formData.dimensions);
+      //   if (parsedDims) data.append("dimensions", JSON.stringify(parsedDims));
+      // }
+      // if (formData.dimensions && String(formData.dimensions).trim()) {
+      //   data.append("dimensions", String(formData.dimensions).trim());
+      // }
+      if (formData.dimensions && String(formData.dimensions).trim()) {
         const parsedDims = parseDimensionsInput(formData.dimensions);
-        if (parsedDims) data.append("dimensions", JSON.stringify(parsedDims));
+        if (parsedDims) {
+          data.append("dimensions", JSON.stringify(parsedDims));
+        } else {
+          data.append("dimensions", String(formData.dimensions).trim());
+        }
       }
       if (formData.attributes && String(formData.attributes).trim()) {
         try {
@@ -347,6 +365,29 @@ export default function EditProductModal() {
                 type="number"
                 name="sales_count"
                 value={formData.sales_count ?? 0}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Rating</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="5"
+                name="rating"
+                value={formData.rating ?? 0}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Reviews Count</label>
+              <input
+                type="number"
+                name="rating_count"
+                value={formData.rating_count ?? 0}
                 onChange={handleInputChange}
                 className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
               />

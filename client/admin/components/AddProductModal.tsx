@@ -41,6 +41,8 @@ export default function AddProductModal() {
     sku: "",
     image: null as File | null, // <-- Changed to File
     sales_count: "0",
+    rating: "0",         // <-- Add this
+    rating_count: "0",   // <-- Add this
     category: "",
     brand: "",
     price: "",
@@ -152,6 +154,8 @@ export default function AddProductModal() {
       data.append("slug", finalSlug);
       data.append("sku", formData.sku);
       data.append("sales_count", String(Number(formData.sales_count) || 0));
+      data.append("rating", String(Number(formData.rating) || 0));             // <-- Add this
+      data.append("rating_count", String(Number(formData.rating_count) || 0)); // <-- Add this
       data.append("price", String(Number(formData.price)));
       data.append("stock_quantity", String(Number(formData.stock_quantity) || 0));
       data.append("status", formData.status);
@@ -292,6 +296,31 @@ export default function AddProductModal() {
                 className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
               />
             </div>
+            {/* <div className="grid grid-cols-2 gap-2"> */}
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Rating</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="5"
+                name="rating"
+                value={formData.rating}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[#8A99AD] font-medium">Reviews Count</label>
+              <input
+                type="number"
+                name="rating_count"
+                value={formData.rating_count}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            {/* </div> */}
           </div>
           {/* Row 2: Category & Brand */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -83,6 +83,8 @@ class Product(models.Model):
     #dimensions = models.JSONField(blank=True, null=True)  # {"l":..,"w":..,"h":..}
     stock_quantity = models.PositiveIntegerField(default=0)
     sales_count = models.PositiveIntegerField(default=0)
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00) # e.g., 4.50
+    rating_count = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)

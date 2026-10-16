@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, type MouseEvent } from "react";
+import { useRef, useState, useEffect, useMemo, type MouseEvent } from "react";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { ShoppingCart, Heart, Eye, ArrowLeftRight, Star, Check } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, useReducedMotion } from "framer-motion";
@@ -25,14 +25,26 @@ interface Tab {
     id: TabId;
     label: string;
 }
-
+export interface CategoryItem {
+    id: number | string;
+    name: string;
+    slug: string;
+    parent_id: string | number;
+    description: string;
+    image: string;
+    is_active: boolean;
+}
 interface Product {
     id: string;
     name: string;
     price: number;
+    compare_at_price: number | null;
+    sales_count: number;
+    category: number;
     oldPrice?: number;
     rating?: number;
     image: string;
+    created_at: string;
 }
 
 const TABS: Tab[] = [
@@ -41,38 +53,38 @@ const TABS: Tab[] = [
     { id: "sale", label: "On Sale" },
 ];
 
-const PRODUCTS: Record<TabId, Product[]> = {
-    popular: [
-        { id: "p1", name: "Wireless Earbuds Pro", price: 89.0, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZx0F8ZhiQlsE-oheaE5v-J2YPS5dlNcuIKyee4DJTZb4tsTdi_hXJPGwk&s=10" },
-        { id: "p2", name: "Smart Fitness Tracker", price: 56.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxk3MWzOc7jlcbJBBSCGchcWKdEBo7NZoz2FabSbIX-A&s=10" },
-        { id: "p3", name: "Portable Power Bank 20K", price: 41.0, oldPrice: 55.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvmnrYXKF5xBNzMHj3YQ32cOwRPAvkDXJnX24pfT4TzQ&s=10" },
-        { id: "p4", name: "Compact Action Camera", price: 87.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRqnxGyhvv6RqSh_MUz-U4Nd1lRBJHdfgAjAD5Wq_uz7w&s=10" },
-        { id: "p5", name: "Noise-Cancelling Headset", price: 49.0, oldPrice: 78.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSLI9vJ7LSf6uVwjPBkIcvtg2UPUTIIm4xr_q3dUfcLng&s=10" },
-        { id: "p6", name: "Smart Home Hub Mini", price: 77.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbSq7VSGAG-WUm1hv9CAApuwAAGEKCi4ORMzhFTz3i2Q&s=10" },
-        { id: "p7", name: "USB-C Fast Charger Kit", price: 84.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLJjMJtRzkkyZmJOv1W6JtxUPu5hEBm3GmSh0Cs3UjVQ&s=10" },
-        { id: "p8", name: "Mechanical Keyboard Compact", price: 66.0, image: "https://cdn.thewirecutter.com/wp-content/media/2025/12/BEST-COMPACT-MECHANICAL-KEYBOARDS-08547-2x1-1.jpg?width=2048&quality=75&crop=2:1&auto=webp" },
-    ],
-    new: [
-        { id: "n1", name: "Foldable Mini Drone", price: 129.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS1rFG3gpabk_5i21aShVL42gkYC0hA6p7XwaLsQgT-CA&s" },
-        { id: "n2", name: "Smart LED Desk Lamp", price: 34.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEOta0aHdxhPdjT1wZyNJd1N6jSwLQXlOS8od39wQxRw&s=10" },
-        { id: "n3", name: "Wireless Charging Stand", price: 28.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-jW7DOff7H-hK1eyDYNvebMcb8qUsT-JAOAHvlCDQ_w&s=10" },
-        { id: "n4", name: "4K Webcam Pro", price: 59.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZ8SAJli-Yk3rQc1pdncgHm8Y5fK3eM3JyOz1YwZXYbQ&s" },
-        { id: "n5", name: "Smart Door Lock", price: 99.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVOznFKJ52EKBz356NpKL7AdgdeI86_y9fTyOwAguRdQ&s=10" },
-        { id: "n6", name: "Portable SSD 1TB", price: 95.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQZXQ2h_o1Q2TKyQ8_Zst3PsPxFVon5RUcKoFcpD7I1nQ&s=10" },
-        { id: "n7", name: "Gaming Mouse RGB", price: 45.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsWL5wKuNBYIwLiyKB9G6Yt4JlH-lmGWuai4Drepe0rg&s=10" },
-        { id: "n8", name: "Smart Plug 4-Pack", price: 32.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSydo-F7EdKK8JhkKPlyhcU0YPw1HlGtIIQFzugyYDIQg&s=10" },
-    ],
-    sale: [
-        { id: "s1", name: "Bluetooth Smartwatch", price: 69.0, oldPrice: 99.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfxDgPpNpt5CKeEB9EErbVGKtNDnH_yZuyVWIqQuU_JQ&s=10" },
-        { id: "s2", name: "Noise-Isolating Earphones", price: 19.0, oldPrice: 29.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpIoaxNgfnC2VZWdAN3t_LeEiRb9hB-8Fj3CFmOjVHng&s=10" },
-        { id: "s3", name: "Portable Mini Projector", price: 149.0, oldPrice: 199.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS88E7Zj-u4FtArxc7L25iifDJ5McVBjxfzdVoz-TDWg&s=10" },
-        { id: "s4", name: "Wireless Charging Pad Trio", price: 35.0, oldPrice: 49.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-Sa_nn__ptFgTTULv0opWywPgHtk4hyiIyotNnepowA&s=10" },
-        { id: "s5", name: "Smart Security Camera", price: 44.0, oldPrice: 64.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR62nHEJIO8HrMvV-SPw01nWlx-HDxS2HuPalUg57qD7w&s=10" },
-        { id: "s6", name: "Bluetooth Car Adapter", price: 15.0, oldPrice: 22.0, image: "https://m.media-amazon.com/images/I/71aeV36ZxsL.jpg" },
-        { id: "s7", name: "Ergonomic Wireless Mouse", price: 22.0, oldPrice: 30.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQEsQe6XonjbMv7UjmRrlHrUGiANHwHynuYF3lGPNKplw&s=10" },
-        { id: "s8", name: "Universal Travel Adapter", price: 18.0, oldPrice: 25.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbAsuvqf6SE6-I-vmz2Evt8MlZoaxmi3rPM_LETv2MuA&s=10" },
-    ],
-};
+// const PRODUCTS: Record<TabId, Product[]> = {
+//     popular: [
+//         { id: "p1", name: "Wireless Earbuds Pro", price: 89.0, rating: 5, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZx0F8ZhiQlsE-oheaE5v-J2YPS5dlNcuIKyee4DJTZb4tsTdi_hXJPGwk&s=10" },
+//         { id: "p2", name: "Smart Fitness Tracker", price: 56.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxk3MWzOc7jlcbJBBSCGchcWKdEBo7NZoz2FabSbIX-A&s=10" },
+//         { id: "p3", name: "Portable Power Bank 20K", price: 41.0, oldPrice: 55.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvmnrYXKF5xBNzMHj3YQ32cOwRPAvkDXJnX24pfT4TzQ&s=10" },
+//         { id: "p4", name: "Compact Action Camera", price: 87.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRqnxGyhvv6RqSh_MUz-U4Nd1lRBJHdfgAjAD5Wq_uz7w&s=10" },
+//         { id: "p5", name: "Noise-Cancelling Headset", price: 49.0, oldPrice: 78.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSLI9vJ7LSf6uVwjPBkIcvtg2UPUTIIm4xr_q3dUfcLng&s=10" },
+//         { id: "p6", name: "Smart Home Hub Mini", price: 77.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQbSq7VSGAG-WUm1hv9CAApuwAAGEKCi4ORMzhFTz3i2Q&s=10" },
+//         { id: "p7", name: "USB-C Fast Charger Kit", price: 84.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLJjMJtRzkkyZmJOv1W6JtxUPu5hEBm3GmSh0Cs3UjVQ&s=10" },
+//         { id: "p8", name: "Mechanical Keyboard Compact", price: 66.0, image: "https://cdn.thewirecutter.com/wp-content/media/2025/12/BEST-COMPACT-MECHANICAL-KEYBOARDS-08547-2x1-1.jpg?width=2048&quality=75&crop=2:1&auto=webp" },
+//     ],
+//     new: [
+//         { id: "n1", name: "Foldable Mini Drone", price: 129.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS1rFG3gpabk_5i21aShVL42gkYC0hA6p7XwaLsQgT-CA&s" },
+//         { id: "n2", name: "Smart LED Desk Lamp", price: 34.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEOta0aHdxhPdjT1wZyNJd1N6jSwLQXlOS8od39wQxRw&s=10" },
+//         { id: "n3", name: "Wireless Charging Stand", price: 28.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-jW7DOff7H-hK1eyDYNvebMcb8qUsT-JAOAHvlCDQ_w&s=10" },
+//         { id: "n4", name: "4K Webcam Pro", price: 59.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZ8SAJli-Yk3rQc1pdncgHm8Y5fK3eM3JyOz1YwZXYbQ&s" },
+//         { id: "n5", name: "Smart Door Lock", price: 99.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRVOznFKJ52EKBz356NpKL7AdgdeI86_y9fTyOwAguRdQ&s=10" },
+//         { id: "n6", name: "Portable SSD 1TB", price: 95.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQZXQ2h_o1Q2TKyQ8_Zst3PsPxFVon5RUcKoFcpD7I1nQ&s=10" },
+//         { id: "n7", name: "Gaming Mouse RGB", price: 45.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsWL5wKuNBYIwLiyKB9G6Yt4JlH-lmGWuai4Drepe0rg&s=10" },
+//         { id: "n8", name: "Smart Plug 4-Pack", price: 32.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSydo-F7EdKK8JhkKPlyhcU0YPw1HlGtIIQFzugyYDIQg&s=10" },
+//     ],
+//     sale: [
+//         { id: "s1", name: "Bluetooth Smartwatch", price: 69.0, oldPrice: 99.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfxDgPpNpt5CKeEB9EErbVGKtNDnH_yZuyVWIqQuU_JQ&s=10" },
+//         { id: "s2", name: "Noise-Isolating Earphones", price: 19.0, oldPrice: 29.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpIoaxNgfnC2VZWdAN3t_LeEiRb9hB-8Fj3CFmOjVHng&s=10" },
+//         { id: "s3", name: "Portable Mini Projector", price: 149.0, oldPrice: 199.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQS88E7Zj-u4FtArxc7L25iifDJ5McVBjxfzdVoz-TDWg&s=10" },
+//         { id: "s4", name: "Wireless Charging Pad Trio", price: 35.0, oldPrice: 49.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-Sa_nn__ptFgTTULv0opWywPgHtk4hyiIyotNnepowA&s=10" },
+//         { id: "s5", name: "Smart Security Camera", price: 44.0, oldPrice: 64.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR62nHEJIO8HrMvV-SPw01nWlx-HDxS2HuPalUg57qD7w&s=10" },
+//         { id: "s6", name: "Bluetooth Car Adapter", price: 15.0, oldPrice: 22.0, image: "https://m.media-amazon.com/images/I/71aeV36ZxsL.jpg" },
+//         { id: "s7", name: "Ergonomic Wireless Mouse", price: 22.0, oldPrice: 30.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQEsQe6XonjbMv7UjmRrlHrUGiANHwHynuYF3lGPNKplw&s=10" },
+//         { id: "s8", name: "Universal Travel Adapter", price: 18.0, oldPrice: 25.0, image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbAsuvqf6SE6-I-vmz2Evt8MlZoaxmi3rPM_LETv2MuA&s=10" },
+//     ],
+// };
 
 /* ---------- Motion variants ---------- */
 
@@ -213,7 +225,8 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
             className={styles.card}
         >
             <div className={styles.cardImage}>
-                {product.oldPrice && (
+                {/* {product.oldPrice && ( */}
+                {product.compare_at_price && (
                     <motion.span
                         className={styles.saleBadge}
                         initial={{ scale: 0, opacity: 0 }}
@@ -309,9 +322,10 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
             <div className={styles.cardInfo}>
                 <h3 className={styles.cardName}>{product.name}</h3>
                 <div className={styles.priceRow}>
-                    {product.oldPrice && (
+                    {/* {product.oldPrice && ( */}
+                    {product.compare_at_price && (
                         <span className={styles.oldPriceWrap}>
-                            <span className={styles.oldPrice}>${product.oldPrice.toFixed(2)}</span>
+                            <span className={styles.oldPrice}>${product.compare_at_price.toFixed(2)}</span>
                             <motion.span
                                 className={styles.oldPriceStrike}
                                 initial={{ scaleX: 0 }}
@@ -356,6 +370,129 @@ export default function GadgetsSection() {
         window.addEventListener(GADGET_TAB_EVENT, handler);
         return () => window.removeEventListener(GADGET_TAB_EVENT, handler);
     }, []);
+    const [categories, setCategories] = useState<CategoryItem[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    // const [filteredProducts, setFilteredProducts] = useState<Record<TabId, Product[]>>({
+    //     popular: [],
+    //     new: [],
+    //     sale: [],
+    // });
+    //let gadgetsCategory: CategoryItem;
+    //const [gadgetsCategory, setGadgetsCategory] = useState<CategoryItem[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    const [loading2, setLoading2] = useState<boolean>(true);
+    const [error2, setError2] = useState<string | null>(null);
+    // const prevA = useRef(products);
+    // const prevB = useRef(categories);
+    useEffect(() => {
+        // Replace this URL with your actual Django API endpoint
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch("http://127.0.0.1:8080/api/categories/");
+                console.log(response);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch categories data");
+                }
+                const data = await response.json();
+                console.log(data);
+                setCategories(data);
+            } catch (err: any) {
+                setError(err.message || "An error occurred");
+            } finally {
+                setLoading(false);
+            }
+        };
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch("http://127.0.0.1:8080/api/products/");
+                console.log(response);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch products data");
+                }
+                const data = await response.json();
+                // console.log(data);
+                // setProducts(data);
+                // API returns decimals as strings ("89.00"), so convert them to numbers
+                const normalized: Product[] = (Array.isArray(data) ? data : data.results ?? []).map((p: any) => ({
+                    ...p,
+                    price: Number(p.price),
+                    compare_at_price: p.compare_at_price != null ? Number(p.compare_at_price) : null,
+                    rating: p.rating != null ? Number(p.rating) : undefined,
+                    sales_count: Number(p.sales_count ?? 0),
+                }));
+
+                setProducts(normalized);
+            } catch (err: any) {
+                setError2(err.message || "An error occurred");
+            } finally {
+                setLoading2(false);
+            }
+        };
+
+        fetchProducts();
+        fetchCategories();
+    }, []);
+    // useEffect(() => {
+    //     const aChanged = prevA.current !== products;
+    //     const bChanged = prevB.current !== categories;
+
+    //     if (aChanged && bChanged) {
+    //         console.log("Both valueA AND valueB changed!");
+    //         gadgetsCategory = categories.find(c => c.name === "Gadgets")!;
+    //         //setGadgetsCategory(gadgetsCategory);
+    //         const gadgetProducts = gadgetsCategory
+    //             ? products.filter(p => p.category_id === gadgetsCategory.id)
+    //             : [];
+    //         const gadgets_popular = gadgetProducts.sort((a, b) => b.sales_count - a.sales_count || b.rating! - a.rating!).slice(0, 8);
+    //         const gadgets_new = gadgetProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
+    //         const gadgets_sale = gadgetProducts.filter(p => p.compare_at_price !== null && p.compare_at_price > p.price).slice(0, 8);
+    //         setFilteredProducts(prev => ({
+    //             ...prev,
+    //             popular: [...prev["popular"], gadgets_popular]! as Product[],
+    //             new: [...prev["new"], gadgets_new]! as Product[],
+    //             sale: [...prev["sale"], gadgets_sale]! as Product[],
+    //         }));
+    //     }
+
+    //     // 3. Always update the refs at the end of the effect so they stay current
+    //     prevA.current = products;
+    //     prevB.current = categories;
+
+    // }, [categories, products]);
+    const filteredProducts = useMemo<Record<TabId, Product[]>>(() => {
+        const gadgets = categories.find((c) => c.name === "Gadgets");
+        if (!gadgets) return { popular: [], new: [], sale: [] };
+
+        const gadgetProducts = products.filter(
+            (p) => String(p.category) === String(gadgets.id)
+        );
+        console.log(gadgetProducts)
+        return {
+            popular: [...gadgetProducts]
+                .sort((a, b) => b.sales_count - a.sales_count || (b.rating ?? 0) - (a.rating ?? 0))
+                .slice(0, 8),
+            new: [...gadgetProducts]
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, 8),
+            sale: gadgetProducts
+                .filter((p) => p.compare_at_price != null && p.compare_at_price > p.price)
+                .slice(0, 8),
+        };
+    }, [categories, products]);
+    // useEffect(() => {
+    //     console.log(filteredProducts)
+    // }, [filteredProducts]);
+    // useEffect(() => {
+    //     const tab = getGadgetTabFromHash();
+    //     if (!tab) return;
+    //     setActiveTab(tab);
+    //     // small delay so layout/fonts/images settle before we scroll
+    //     const t = setTimeout(() => {
+    //         document.getElementById("gadgets")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    //     }, 150);
+    //     return () => clearTimeout(t);
+    // }, [products]);
     // Cross-page navigation (ShopHeader.tsx on /shop landing on "/#on-sale" etc.)
     useEffect(() => {
         const tab = getGadgetTabFromHash();
@@ -422,7 +559,10 @@ export default function GadgetsSection() {
                             className={styles.grid}
                             role="tabpanel"
                         >
-                            {PRODUCTS[activeTab].map((product, i) => (
+                            {/* {PRODUCTS[activeTab].map((product, i) => (
+                                <ProductCard key={product.id} product={product} index={i} reduceMotion={!!reduceMotion} />
+                            ))} */}
+                            {filteredProducts[activeTab].map((product, i) => (
                                 <ProductCard key={product.id} product={product} index={i} reduceMotion={!!reduceMotion} />
                             ))}
                         </motion.div>

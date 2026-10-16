@@ -4,7 +4,39 @@ import { useMemo, useState, type SVGProps } from "react";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./BestSellingProducts.module.css";
-import { bestSellingTabs as defaultTabs, type BestSellingTab, type Product } from "./data";
+import { type BestSellingTab, type Product } from "./data";
+
+
+
+
+interface TabConfig {
+  id: string;
+  label: string;
+  sort: (a: Product, b: Product) => number;
+}
+
+const TAB_CONFIGS: TabConfig[] = [
+  { id: "popular", label: "Popular", sort: ((a, b) => b.sales_count - a.sales_count || (b.rating ?? 0) - (a.rating ?? 0)) },
+  {
+    id: "newly-added",
+    label: "Newly Added",
+    sort: (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+  },
+  { id: "low-price", label: "Low Price", sort: (a, b) => a.price - b.price },
+];
+
+function buildTabs(
+  products: Product[],
+  configs: TabConfig[] = TAB_CONFIGS,
+  limit = 8
+): BestSellingTab[] {
+  return configs.map(({ id, label, sort }) => ({
+    id,
+    label,
+    products: [...products].sort(sort).slice(0, limit), // copy so the original isn't mutated
+  }));
+}
+
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -223,15 +255,18 @@ function ProductCard({
         </h3>
 
         <div className={styles.rating}>
-          <Stars percent={product.ratingPercent} />
-          <span className={styles.ratingCount}>({product.ratingCount})</span>
+          <Stars percent={(product.rating / 5) * 100} />
+          <span className={styles.ratingCount}>({product.rating_count})</span>
         </div>
 
         <div className={styles.priceRow}>
           <span className={styles.price}>{currency.format(product.price)}</span>
-          {product.oldPrice ? (
+          {/* {product.compare_at_price ? (
             <span className={styles.oldPrice}>{currency.format(product.oldPrice)}</span>
-          ) : null}
+          ) : null} */}
+          {product.compare_at_price! > 0 ? (
+            <span className={styles.oldPrice}>{currency.format(product.compare_at_price!)}</span>
+          ) : (null)}
         </div>
       </div>
     </motion.article>
@@ -239,19 +274,24 @@ function ProductCard({
 }
 
 export interface BestSellingProductsProps {
-  tabs?: BestSellingTab[];
+  products?: Product[];
+  limit?: number;
   onAddToCart?: (product: Product) => void;
   onQuickView?: (product: Product) => void;
   onCompare?: (product: Product) => void;
 }
 
 export default function BestSellingProducts({
-  tabs = defaultTabs,
+  //tabs = defaultTabs,
+  products,
+  limit = 8,
   onAddToCart = (product) => console.log("Add to cart", product.id),
   onQuickView = (product) => console.log("Quick view", product.id),
   onCompare = (product) => console.log("Compare", product.id),
 }: BestSellingProductsProps) {
-  const [activeTabId, setActiveTabId] = useState<string | undefined>(tabs[0]?.id);
+  const tabs = useMemo(() => buildTabs(products!, TAB_CONFIGS, limit), [products, limit]);
+
+  const [activeTabId, setActiveTabId] = useState<string | undefined>(TAB_CONFIGS[0]?.id);
   const [wishlist, setWishlist] = useState<Set<number>>(() => new Set());
 
   const activeTab = useMemo(

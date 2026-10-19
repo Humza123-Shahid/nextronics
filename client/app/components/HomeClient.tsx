@@ -275,6 +275,7 @@ export default function HomeClient({ products }: { products: Product[] }) {
                 </section>
 
             </div>
+            <Footer />
         </>
     );
 }

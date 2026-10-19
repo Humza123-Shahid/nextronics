@@ -1,8 +1,13 @@
 import re
+from django.db.models import Q
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from .models import User, Address, Category, Brand, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
 from .serializers import UserSerializer, AddressSerializer, CategorySerializer, BrandSerializer, ProductSerializer, ProductVariantSerializer, AttributeValueSerializer, InventorySerializer, WarehouseSerializer, CartSerializer, CartItemSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer, ShippingMethodSerializer, ShipmentSerializer, NotificationSerializer, TestimonialSerializer, SocialSerializer,PageVisitSerializer
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -115,3 +120,110 @@ class PageVisitViewSet(viewsets.ModelViewSet):
             ip_address=ip,
             user=user
         )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    """Authenticate user or admin, supporting both email/username and hashed/plain passwords."""
+    data = request.data or {}
+    identifier = str(data.get('username') or data.get('email') or '').strip()
+    password = str(data.get('password') or '').strip()
+    role = str(data.get('role') or '').lower()  # 'admin' or 'user'
+
+    if not identifier or not password:
+        return Response({'detail': 'Please provide both username/email and password.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(Q(username__iexact=identifier) | Q(email__iexact=identifier)).first()
+    if not user:
+        return Response({'detail': 'Invalid username/email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Check password (support Django PBKDF2 hash or legacy plain string)
+    password_valid = user.check_password(password) or (user.password == password)
+    if not password_valid:
+        return Response({'detail': 'Invalid username/email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if not user.is_active:
+        return Response({'detail': 'This account is currently disabled. Please contact support.'}, status=status.HTTP_403_FORBIDDEN)
+
+    is_admin = bool(user.is_staff or user.is_superuser)
+
+    # If the user specifically attempted to log into the Admin portal:
+    if role == 'admin' and not is_admin:
+        return Response({'detail': 'Access denied: This account does not possess administrator credentials.'}, status=status.HTTP_403_FORBIDDEN)
+
+    return Response({
+        'success': True,
+        'message': 'Login successful',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone_number': user.phone_number,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser,
+            'is_seller': user.is_seller,
+            'is_verified': user.is_verified,
+        },
+        'isAdmin': is_admin,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup_view(request):
+    """Register a new customer user (admin accounts are managed securely)."""
+    data = request.data or {}
+    username = str(data.get('username') or '').strip()
+    email = str(data.get('email') or '').strip().lower()
+    password = str(data.get('password') or '').strip()
+    first_name = str(data.get('first_name') or '').strip()
+    last_name = str(data.get('last_name') or '').strip()
+    phone_number = str(data.get('phone_number') or '').strip()
+
+    if not username:
+        return Response({'detail': 'Username is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not email:
+        return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not password or len(password) < 5:
+        return Response({'detail': 'Password must be at least 5 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(username__iexact=username).exists():
+        return Response({'detail': 'This username is already taken. Please choose another.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(email__iexact=email).exists():
+        return Response({'detail': 'An account with this email address already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User(
+        username=username,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        phone_number=phone_number,
+        is_staff=False,
+        is_superuser=False,
+        is_active=True,
+    )
+    user.set_password(password)
+    user.save()
+
+    return Response({
+        'success': True,
+        'message': 'Account created successfully',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone_number': user.phone_number,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser,
+            'is_seller': user.is_seller,
+            'is_verified': user.is_verified,
+        },
+        'isAdmin': False,
+    }, status=status.HTTP_201_CREATED)
+

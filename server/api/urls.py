@@ -1,5 +1,12 @@
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet, AddressViewSet, CategoryViewSet, BrandViewSet, ProductViewSet, ProductVariantViewSet, AttributeValueViewSet, InventoryViewSet, WarehouseViewSet, CartViewSet, CartItemViewSet, OrderViewSet, OrderItemViewSet, PaymentViewSet, ShippingMethodViewSet, ShipmentViewSet, NotificationViewSet, TestimonialViewSet, SocialViewSet,PageVisitViewSet
+from .views import (
+    UserViewSet, AddressViewSet, CategoryViewSet, BrandViewSet, ProductViewSet,
+    ProductVariantViewSet, AttributeValueViewSet, InventoryViewSet, WarehouseViewSet,
+    CartViewSet, CartItemViewSet, OrderViewSet, OrderItemViewSet, PaymentViewSet,
+    ShippingMethodViewSet, ShipmentViewSet, NotificationViewSet, TestimonialViewSet,
+    SocialViewSet, PageVisitViewSet, login_view, signup_view
+)
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
@@ -23,4 +30,8 @@ router.register(r'socials', SocialViewSet)
 router.register(r'notifications', NotificationViewSet)
 router.register(r'page-visits', PageVisitViewSet)
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('auth/login/', login_view, name='auth-login'),
+    path('auth/signup/', signup_view, name='auth-signup'),
+    path('', include(router.urls)),
+]

@@ -296,3 +296,49 @@ export async function fetchProducts(): Promise<Product[]> {
 // };
 
 //export const products: Product[] = Object.values(P);
+
+
+// export const bestSellingTabs: BestSellingTab[] = [
+//   {
+//     id: "popular",
+//     label: "Popular",
+//     products: [
+//       P.ancHeadphones,
+//       P.fitnessWatch,
+//       P.actionCamera,
+//       P.btSpeaker,
+//       P.mechKeyboard,
+//       P.gamingMouse,
+//       P.monitor4k,
+//       P.earbuds,
+//     ],
+//   },
+//   {
+//     id: "newly-added",
+//     label: "Newly Added",
+//     products: [
+//       P.drone,
+//       P.smartHomeHub,
+//       P.ancHeadphones,
+//       P.powerBank20k,
+//       P.dockingStation,
+//       P.ledDeskLamp,
+//       P.gamingLaptop,
+//       P.earbuds,
+//     ],
+//   },
+//   {
+//     id: "low-price",
+//     label: "Low Price",
+//     products: [
+//       P.dockingStation,
+//       P.wiredEarphones,
+//       P.ringLight,
+//       P.powerBank10k,
+//       P.mechKeyboard,
+//       P.phoneTripod,
+//       P.gamingMouse,
+//       P.miniSpeaker,
+//     ],
+//   },
+// ];

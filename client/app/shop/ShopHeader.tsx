@@ -174,8 +174,8 @@ export default function ShopHeader() {
                   </Link>
                 </li>
                 <li className="flex flex-wrap gap-x-4 gap-y-1 px-3 pt-2 text-xs text-slate-500 dark:text-slate-400">
-                  <Link href="#login" className="hover:text-blue-600">Login</Link>
-                  <Link href="#signup" className="hover:text-blue-600">Signup</Link>
+                  <Link href="/signin" className="hover:text-blue-600">Login</Link>
+                  <Link href="/signup" className="hover:text-blue-600">Signup</Link>
                   <a href="mailto:support@nextronics.com" className="hover:text-blue-600 break-all">
                     support@nextronics.com
                   </a>
@@ -224,8 +224,8 @@ export default function ShopHeader() {
               label="My Account"
               icon={<User className="w-3.5 h-3.5" />}
               items={[
-                { name: "Login", href: "#login" },
-                { name: "Signup", href: "#signup" },
+                { name: "Sign In", href: "/signin" },
+                { name: "Sign Up", href: "/signup" },
               ]}
             />
           </ul>

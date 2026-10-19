@@ -337,7 +337,8 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
                     )}
                     <span className={styles.price}>${product.price.toFixed(2)}</span>
                 </div>
-                {product.rating && (
+                {/* {product.rating && ( */}
+                {product.rating! > 0 ? (
                     <motion.div
                         className={styles.rating}
                         aria-label={`Rated ${product.rating} out of 5`}
@@ -352,7 +353,8 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
                             </motion.span>
                         ))}
                     </motion.div>
-                )}
+                ) : null
+                }
             </div>
         </motion.article>
     );

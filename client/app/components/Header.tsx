@@ -15,8 +15,12 @@ import {
   X,
   Cpu,
   Zap,
+  LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { GADGET_TAB_MAP, goToGadgets } from "../lib/gadgetsNav"; // adjust path if needed
+import { useAuth } from "../context/AuthContext";
+
 
 interface SubMenuItem {
   name: string;
@@ -55,9 +59,15 @@ const NAV_ITEMS = [
   // { name: "Computer & Laptop", href: "#computer-laptop" },
   { name: "New Arrival", href: "#new-arrival", badge: "NEW" },
   { name: "Contact Us", href: "/contact" },
+  { name: "Dashboard", href: "/admin" },
 ];
 
 export default function Header() {
+  // --- AUTH state ---
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const accountDropdownRef = useRef<HTMLDivElement>(null);
+
   // --- FULL header state ---
   const [isCatOpen, setIsCatOpen] = useState(false);
   const [hoveredCat, setHoveredCat] = useState<string | null>(null);
@@ -66,6 +76,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const catDropdownRef = useRef<HTMLDivElement>(null);
+
 
   // --- COMPACT header state ---
   const [compactMenuOpen, setCompactMenuOpen] = useState(false);
@@ -137,6 +148,21 @@ export default function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Close account dropdown on outside click
+  useEffect(() => {
+    function handleAccountClickOutside(event: MouseEvent) {
+      if (
+        accountDropdownRef.current &&
+        !accountDropdownRef.current.contains(event.target as Node)
+      ) {
+        setAccountDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleAccountClickOutside);
+    return () => document.removeEventListener("mousedown", handleAccountClickOutside);
+  }, []);
+
 
   // Close compact search panel on outside click / Escape
   useEffect(() => {
@@ -369,19 +395,109 @@ export default function Header() {
                 </Link>
               </motion.div>
 
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="#my-account"
-                  className="p-1.5 sm:p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5"
-                  title="My Account"
-                >
-                  <User className="w-5 h-5 stroke-[1.75px]" />
-                  <div className="hidden xl:flex flex-col text-left text-xs leading-tight">
-                    <span className="text-[10px] text-slate-400">Account</span>
-                    <span className="font-semibold">Sign In</span>
+              {/* Dynamic User Account Dropdown / Sign In */}
+              <div className="relative" ref={accountDropdownRef}>
+                {isAuthenticated ? (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                      className="p-1.5 sm:p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 cursor-pointer"
+                      title="Account Menu"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 p-0.5 flex items-center justify-center text-white shrink-0">
+                        <div className="w-full h-full rounded-full bg-[#0c101d] flex items-center justify-center text-xs font-bold text-cyan-400">
+                          {user?.username?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                      </div>
+                      <div className="hidden xl:flex flex-col text-left text-xs leading-tight">
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                          {isAdmin ? (
+                            <span className="text-blue-400 font-semibold flex items-center gap-0.5">
+                              <ShieldCheck className="w-3 h-3" /> Admin
+                            </span>
+                          ) : (
+                            "Customer"
+                          )}
+                        </span>
+                        <span className="font-semibold truncate max-w-[95px]">
+                          {user?.first_name || user?.username}
+                        </span>
+                      </div>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden xl:block" />
+                    </button>
+
+                    <AnimatePresence>
+                      {accountDropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 mt-2 w-56 rounded-xl bg-[#0d1322] border border-slate-800 shadow-2xl p-2 z-50 text-xs"
+                        >
+                          <div className="px-3 py-2 border-b border-slate-800 mb-1">
+                            <p className="font-bold text-white truncate">{user?.username}</p>
+                            <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                            {isAdmin && (
+                              <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-600/30 text-blue-300 border border-blue-500/30">
+                                Administrator
+                              </span>
+                            )}
+                          </div>
+
+                          {isAdmin && (
+                            <Link
+                              href="/admin"
+                              onClick={() => setAccountDropdownOpen(false)}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-blue-400 hover:bg-slate-800/80 hover:text-cyan-300 transition-colors font-semibold"
+                            >
+                              <ShieldCheck className="w-4 h-4" />
+                              <span>Admin Dashboard</span>
+                            </Link>
+                          )}
+
+                          <Link
+                            href="/shop"
+                            onClick={() => setAccountDropdownOpen(false)}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors"
+                          >
+                            <ShoppingBag className="w-4 h-4 text-cyan-400" />
+                            <span>Browse Shop</span>
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              logout();
+                              setAccountDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors text-left mt-1 border-t border-slate-800/80 cursor-pointer"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </Link>
-              </motion.div>
+                ) : (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                      href="/signin"
+                      className="p-1.5 sm:p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5"
+                      title="Sign In"
+                    >
+                      <User className="w-5 h-5 stroke-[1.75px]" />
+                      <div className="hidden xl:flex flex-col text-left text-xs leading-tight">
+                        <span className="text-[10px] text-slate-400">Account</span>
+                        <span className="font-semibold">Sign In</span>
+                      </div>
+                    </Link>
+                  </motion.div>
+                )}
+              </div>
+
 
               <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Link
@@ -556,10 +672,84 @@ export default function Header() {
               transition={{ duration: 0.3 }}
               className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c101d] overflow-y-auto overscroll-contain max-h-[calc(100vh-64px)] p-4 space-y-6 shadow-2xl"
             >
+              {/* Mobile User Authentication Box */}
+              <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                {isAuthenticated ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 p-0.5 flex items-center justify-center text-white shrink-0">
+                        <div className="w-full h-full rounded-full bg-[#0c101d] flex items-center justify-center text-xs font-bold text-cyan-400">
+                          {user?.username?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-white truncate">{user?.username}</p>
+                          {isAdmin && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-600/30 text-blue-300 border border-blue-500/30">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80">
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-blue-600 hover:text-white transition-colors"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Admin Panel</span>
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          logout();
+                          setMobileMenuOpen(false);
+                        }}
+                        className="py-1.5 px-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold flex items-center justify-center gap-1 hover:bg-rose-500 hover:text-white transition-colors"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                      Account Access
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href="/signin"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-md shadow-blue-600/20"
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        <span>Sign In</span>
+                      </Link>
+                      <Link
+                        href="/signup"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <span>Sign Up</span>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                   Main Menu
                 </div>
+
                 <ul className="space-y-1 rounded-xl bg-slate-50 dark:bg-slate-900/60 p-2 border border-slate-200 dark:border-slate-800">
                   {NAV_ITEMS.map((item, idx) => (
                     <li key={idx}>
@@ -743,10 +933,15 @@ export default function Header() {
                   </motion.div>
 
                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                    <Link href="#my-account" className={compactIconBtnClasses}>
+                    <Link
+                      href={isAuthenticated ? (isAdmin ? "/admin" : "/signin") : "/signin"}
+                      className={compactIconBtnClasses}
+                      title={isAuthenticated ? `Signed in as ${user?.username}` : "Sign In"}
+                    >
                       <User className="w-5 h-5 stroke-[1.75px]" />
                     </Link>
                   </motion.div>
+
 
                   <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                     <Link

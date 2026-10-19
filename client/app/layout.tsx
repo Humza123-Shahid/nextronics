@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import React, { Suspense } from "react";
 import AnalyticsTracker from "./components/AnalyticsTracker";
+import { AuthProvider } from "./context/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
   keywords: ["electronics", "laptops", "audio", "smartphones", "watches", "nextronics"],
 };
 
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,15 +35,18 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
     >
       <body className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-        {/* <Header /> */}
-        <Suspense fallback={null}>
-          <AnalyticsTracker />
-        </Suspense>
-        <main className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        <AuthProvider>
+          {/* <Header /> */}
+          <Suspense fallback={null}>
+            <AnalyticsTracker />
+          </Suspense>
+          <main className="flex-1">
+            {children}
+          </main>
+          {/* <Footer /> */}
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

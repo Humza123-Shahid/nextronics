@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { setAuthCookie, deleteAuthCookie } from "@/app/actions/auth";
 
 export interface AuthUser {
   id: number;
@@ -99,8 +100,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.success && data.user) {
         setUser(data.user);
+        const tokens = data.tokens;
+
+        // 3. Replace cookieStore.set with your Server Action
+        await setAuthCookie(tokens.access);
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+          if (tokens?.access) {
+            localStorage.setItem("nextronics_access_token", tokens.access);
+          }
         } catch (storageErr) {
           console.warn("Could not save to localStorage:", storageErr);
         }
@@ -144,8 +152,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.success && data.user) {
         setUser(data.user);
+        const tokens = data.tokens;
+
+        // 3. Replace cookieStore.set with your Server Action
+        await setAuthCookie(tokens.access);
+
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+          if (tokens?.access) {
+            localStorage.setItem("nextronics_access_token", tokens.access);
+          }
         } catch (storageErr) {
           console.warn("Could not save to localStorage:", storageErr);
         }
@@ -172,6 +188,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem("nextronics_access_token");
+      deleteAuthCookie();
     } catch (err) {
       console.error("Error removing auth from storage:", err);
     }

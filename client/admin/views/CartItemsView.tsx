@@ -156,7 +156,7 @@ export default function CartItemsView() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setSelectedCartItemForView(item)}
-                                                        className="p-1.5 rounded-lg text-[#8A99AD] hover:bg-[#1C2434] hover:text-white transition-colors"
+                                                        className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-md transition-colors"
                                                         title="View Item"
                                                     >
                                                         <Eye className="h-4 w-4" />
@@ -164,7 +164,7 @@ export default function CartItemsView() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setSelectedCartItemForEdit(item)}
-                                                        className="p-1.5 rounded-lg text-[#8A99AD] hover:bg-[#1C2434] hover:text-amber-400 transition-colors"
+                                                        className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-md transition-colors"
                                                         title="Edit Item"
                                                     >
                                                         <Edit className="h-4 w-4" />
@@ -172,7 +172,7 @@ export default function CartItemsView() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setItemToDelete(item)}
-                                                        className="p-1.5 rounded-lg text-[#8A99AD] hover:bg-[#1C2434] hover:text-rose-400 transition-colors"
+                                                        className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-md transition-colors"
                                                         title="Delete Item"
                                                     >
                                                         <Trash2 className="h-4 w-4" />

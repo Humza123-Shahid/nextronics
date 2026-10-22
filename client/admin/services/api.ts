@@ -26,28 +26,40 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
     //     throw new Error(errorMessage);
     // }
     if (!response.ok) {
-        // 1. Capture the raw text in case it's not valid JSON
+        //// 1. Capture the raw text in case it's not valid JSON
         const rawText = await response.text().catch(() => "");
+        let errorData: any = {};
+        try { errorData = JSON.parse(rawText); } catch { errorData = { rawMessage: rawText }; }
 
-        let errorData = {};
-        try {
-            errorData = JSON.parse(rawText);
-        } catch {
-            errorData = { rawMessage: rawText };
-        }
+        console.error("Backend API Error:", response.status, errorData);
 
-        // 2. Enhanced logging to see what went wrong
-        console.error("Backend API Error Status:", response.status);
-        console.error("Backend API Error Data:", errorData);
+        throw new Error(
+            errorData.detail ||
+            errorData.message ||
+            errorData.rawMessage ||
+            `HTTP Error ${response.status}`
+        );
+        // const rawText = await response.text().catch(() => "");
 
-        //     const errorMessage =
-        //         errorData.detail ||
-        //         errorData.message ||
-        //         errorData.rawMessage ||
-        //         `HTTP Error ${response.status}`;
-
-        //     throw new Error(errorMessage);
+        // let errorData = {};
+        // try {
+        //     errorData = JSON.parse(rawText);
+        // } catch {
+        //     errorData = { rawMessage: rawText };
         // }
+
+        // // 2. Enhanced logging to see what went wrong
+        // console.error("Backend API Error Status:", response.status);
+        // console.error("Backend API Error Data:", errorData);
+
+        // //     const errorMessage =
+        // //         errorData.detail ||
+        // //         errorData.message ||
+        // //         errorData.rawMessage ||
+        // //         `HTTP Error ${response.status}`;
+
+        // //     throw new Error(errorMessage);
+        // // }
 
     }
     if (response.status === 204) {
@@ -55,30 +67,80 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
     }
 
     return response.json();
+    // const responseBody = await response.text();
+    // let data;
+    // try {
+    //     data = responseBody ? JSON.parse(responseBody) : null;
+    // } catch {
+    //     data = responseBody;
+    // }
+
+    // if (!response.ok) {
+    //     console.error("Backend API Error Status:", response.status);
+    //     console.error("Backend API Error Data:", data);
+    //     throw new Error(`API Error: ${response.status}`);
+    // }
+
+    // return data;
 }
 
 export const api = {
-    get: <T>(endpoint: string) =>
-        apiRequest<T>(endpoint, { method: "GET" }),
+    get: <T>(endpoint: string, token?: string) =>
+        apiRequest<T>(endpoint, {
+            method: "GET",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }),
 
-    post: <T>(endpoint: string, body: any) =>
+    getWithToken: <T>(endpoint: string, token: string) =>
+        apiRequest<T>(endpoint, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+        }),
+
+    post: <T>(endpoint: string, body: any, token?: string) =>
         apiRequest<T>(endpoint, {
             method: "POST",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
             body: body instanceof FormData ? body : JSON.stringify(body),
         }),
 
-    put: <T>(endpoint: string, body: any) =>
+    postWithToken: <T>(endpoint: string, body: any, token: string) =>
+        apiRequest<T>(endpoint, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: body instanceof FormData ? body : JSON.stringify(body),
+        }),
+
+    put: <T>(endpoint: string, body: any, token?: string) =>
         apiRequest<T>(endpoint, {
             method: "PUT",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
             body: body instanceof FormData ? body : JSON.stringify(body),
         }),
 
-    patch: <T>(endpoint: string, body: any) =>
+    patch: <T>(endpoint: string, body: any, token?: string) =>
         apiRequest<T>(endpoint, {
             method: "PATCH",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
             body: body instanceof FormData ? body : JSON.stringify(body),
         }),
 
-    delete: <T>(endpoint: string) =>
-        apiRequest<T>(endpoint, { method: "DELETE" }),
+    patchWithToken: <T>(endpoint: string, body: any, token: string) =>
+        apiRequest<T>(endpoint, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}` },
+            body: body instanceof FormData ? body : JSON.stringify(body),
+        }),
+
+    delete: <T>(endpoint: string, token?: string) =>
+        apiRequest<T>(endpoint, {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }),
+
+    deleteWithToken: <T>(endpoint: string, token: string) =>
+        apiRequest<T>(endpoint, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        }),
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Plus, Trash2, Edit, Eye, List, Grid, Star } from "lucide-react";
 import Breadcrumb from "../components/Breadcrumb";
 import AddTestimonialModal from "../components/AddTestimonialModal";
@@ -12,11 +12,16 @@ import { useAdmin } from "../context/AdminContext";
 export default function TestimonialsView() {
     const {
         testimonials,
+        fetchTestimonials,
         deleteTestimonial,
         setIsAddTestimonialModalOpen,
         setSelectedTestimonialForView,
         setSelectedTestimonialForEdit,
     } = useAdmin();
+
+    useEffect(() => {
+        fetchTestimonials();
+    }, [fetchTestimonials]);
 
     const [search, setSearch] = useState("");
     const [selectedRating, setSelectedRating] = useState("All");

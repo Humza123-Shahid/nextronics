@@ -28,6 +28,8 @@
 import { useEffect, useState } from "react";
 import styles from "./Testimonials.module.css";
 
+import { getAuthCookie } from "@/admin/actions/auth";
+
 interface Testimonial {
   patientName: string;
   profession: string;
@@ -127,28 +129,76 @@ export default function Testimonials() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  // useEffect(() => {
+  //   const resolveCookie = async () => {
+  //     try {
+  //       const token = await getAuthCookie();
+  //       setAccessToken(token || null);
+  //     } catch (err) {
+  //       console.error("Failed to load auth cookie:", err);
+  //     }
+  //   };
+  //   resolveCookie();
+  // }, []);
+  // useEffect(() => {
+  //   // Replace this URL with your actual Django API endpoint
+  //   const fetchTestimonials = async () => {
+  //     console.log(accessToken);
+  //     if (!accessToken) return;
+  //     try {
+  //       const response = await fetch("http://127.0.0.1:8080/api/testimonials/", {
+  //         method: 'GET',
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           'Authorization': `Bearer ${accessToken}`, // Attaches the JWT token
+  //         },
+  //       });
+  //       console.log(response);
+  //       if (!response.ok) {
+  //         throw new Error("Failed to fetch testimonials data");
+  //       }
+  //       const data = await response.json();
+  //       setTestimonials(data);
+  //     } catch (err: any) {
+  //       setError(err.comment || "An error occurred");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
+  //   fetchTestimonials();
+  // }, [accessToken]);
   useEffect(() => {
-    // Replace this URL with your actual Django API endpoint
-    const fetchTestimonials = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8080/api/testimonials/");
-        console.log(response);
+        setLoading(true);
+        const token = await getAuthCookie();
+        setAccessToken(token || null);
+        console.log(token)
+        const response = await fetch("http://127.0.0.1:8080/api/testimonials/", {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        });
+
         if (!response.ok) {
           throw new Error("Failed to fetch testimonials data");
         }
+
         const data = await response.json();
         setTestimonials(data);
       } catch (err: any) {
-        setError(err.comment || "An error occurred");
+        setError(err.message || "An error occurred");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTestimonials();
+    loadData();
   }, []);
-
   // Handle loading and error states gracefully
   if (loading) return <div className={styles.statusMessage}>Loading testimonials...</div>;
   if (error) return <div className={styles.statusMessage}>Error: {error}</div>;

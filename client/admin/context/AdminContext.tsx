@@ -27,6 +27,7 @@ import {
   Social
 } from "../types";
 import { api } from "../services/api";
+import { getAuthCookie } from "@/admin/actions/auth";
 import { INITIAL_NOTIFICATIONS, INITIAL_MESSAGES } from "../data/mockData";
 
 interface AdminContextType {
@@ -356,6 +357,12 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Helper to enrich raw Address records with user email
 
+  const [accessToken, setAccessToken] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("nextronics_access_token") || null;
+    }
+    return null;
+  });
   // Navigation & Theme
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -374,8 +381,44 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
+    const resolveCookie = async () => {
+      try {
+        const token = await getAuthCookie();
+        if (token) {
+          setAccessToken(token);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("nextronics_access_token", token);
+          }
+        } else if (typeof window !== "undefined") {
+          const stored = localStorage.getItem("nextronics_access_token");
+          if (stored) setAccessToken(stored);
+        }
+      } catch (err) {
+        console.error("Failed to load auth cookie:", err);
+        if (typeof window !== "undefined") {
+          const stored = localStorage.getItem("nextronics_access_token");
+          if (stored) setAccessToken(stored);
+        }
+      }
+    };
+    resolveCookie();
+  }, []);
+
+  useEffect(() => {
     console.log("AdminContext data on the client:", views);
   }, [views]);
+  const getAuthToken = async (): Promise<string | null> => {
+    if (accessToken) return accessToken;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("nextronics_access_token");
+      if (stored) return stored;
+    }
+    try {
+      const cookieToken = await getAuthCookie();
+      if (cookieToken) return cookieToken;
+    } catch { }
+    return null;
+  };
 
   // Products Modal State
   const [selectedProductForView, setSelectedProductForView] = useState<Product | null>(null);
@@ -566,16 +609,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Fetch Users & Addresses directly from PostgreSQL API endpoints
   const fetchUsersAndAddresses = useCallback(async () => {
     try {
+      const token = await getAuthToken();
       const [userData, addrData] = await Promise.all([
-        api.get<User[]>("/users/"),
-        api.get<Address[]>("/addresses/"),
+        api.get<User[]>("/users/", token || undefined),
+        api.get<Address[]>("/addresses/", token || undefined),
       ]);
       setUsers(userData);
       setAddresses(addrData);
     } catch (err) {
       console.error("Failed to load users or addresses from API:", err);
     }
-  }, []);
+  }, [getAuthToken]);
 
   // Helper to format address using DB fields
   const formatAddressDisplay = (addr?: Address) => {
@@ -623,24 +667,25 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Load database entities on initial mount
   useEffect(() => {
     const initData = async () => {
-      await fetchUsersAndAddresses();
+      if (!users.length || !addresses.length) await fetchUsersAndAddresses();
     };
     initData();
-  }, [fetchUsersAndAddresses]);
+  }, [accessToken, users, addresses, fetchUsersAndAddresses]);
   const fetchOrders = useCallback(async () => {
     try {
-      const data = await api.get<Order[]>("/orders/");
+      const token = await getAuthToken();
+      const data = await api.get<Order[]>("/orders/", token || undefined);
       const mapped = data.map((o) => enrichOrderWithRelationNames(o, users, addresses));
       setOrders(mapped);
     } catch (err) {
       console.error("Failed to fetch orders:", err);
     }
-  }, [users, addresses, enrichOrderWithRelationNames]);
+  }, [users, addresses, enrichOrderWithRelationNames, getAuthToken]);
   useEffect(() => {
     if (users.length >= 0 || addresses.length >= 0) {
-      fetchOrders();
+      if (!orders.length) fetchOrders();
     }
-  }, [users, addresses, fetchOrders]);
+  }, [users, addresses, accessToken, orders, fetchOrders]);
   // Sync theme class with HTML element
   useEffect(() => {
     const root = document.documentElement;
@@ -728,13 +773,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const fetchBrands = useCallback(async () => {
     try {
-      const data = await api.get<Brand[]>("/brands/");
+      const token = await getAuthToken();
+      if (!token) return;
+      const data = await api.get<Brand[]>("/brands/", token);
       setBrands(data);
     } catch (err: any) {
       console.error("Failed to fetch brands:", err);
     }
-  }, []);
-
+  }, [getAuthToken]);
+  useEffect(() => {
+    if (!brands.length) fetchBrands();
+  }, [accessToken, brands, fetchBrands]);
   const fetchProducts = useCallback(async () => {
     try {
       const data = await api.get<Product[]>("/products/");
@@ -769,16 +818,44 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // }, []);
 
   // Initial load
+  const fetchTestimonials = useCallback(async () => {
+    let token = accessToken;
+    if (!token && typeof window !== "undefined") {
+      token = localStorage.getItem("nextronics_access_token");
+    }
+    if (!token) {
+      try {
+        token = (await getAuthCookie()) || null;
+      } catch {
+        token = null;
+      }
+    }
+    if (!token) return;
+    try {
+      const data = await api.getWithToken<Testimonial[]>("/testimonials/", token);
+      setTestimonials(data);
+    } catch (err: any) {
+      console.error("Failed to fetch testimonials:", err);
+    }
+  }, [accessToken]);
+  useEffect(() => {
+    fetchTestimonials();
+  }, [accessToken, fetchTestimonials]);
+
   useEffect(() => {
     const loadInitialData = async () => {
       setIsLoading(true);
-      fetchTestimonials();
-      fetchViews();
+      // if (accessToken) {
+      //   fetchTestimonials();
+      // }
+      if (!views.length) fetchViews();
+      const token = await getAuthToken();
+      if (!token) return;
       const [fetchedCats, fetchedBrs] = await Promise.all([
         api.get<CategoryItem[]>("/categories/").catch(() => []),
-        api.get<Brand[]>("/brands/").catch(() => []),
-        fetchOrders(),
-        //fetchCustomers(),
+        !brands.length ? api.get<Brand[]>("/brands/", token || undefined).catch(() => []) : brands,
+        //fetchOrders(),
+        ////fetchCustomers(),
       ]);
 
       if (fetchedCats.length > 0) setCategories(fetchedCats);
@@ -797,8 +874,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    loadInitialData();
-  }, [enrichProductWithRelationNames, fetchOrders, fetchViews]);
+    if (!brands.length || !products.length || !categories.length) loadInitialData();
+    //// }, [enrichProductWithRelationNames, fetchOrders, fetchViews, accessToken, fetchTestimonials]);
+    // }, [enrichProductWithRelationNames, fetchOrders, fetchViews]);
+  }, [enrichProductWithRelationNames, getAuthToken, brands, products, categories]);
+
+  // useEffect(() => {
+  //   if (!socials.length) fetchSocials();   // empty array → fetch → new empty array → fetch...
+  // }, [socials, accessToken, fetchSocials]);
   //}, [enrichProductWithRelationNames, fetchOrders, fetchCustomers]);
 
   // useEffect(() => {
@@ -873,12 +956,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Warehouses CRUD Actions
   const fetchWarehouses = useCallback(async () => {
     try {
-      const data = await api.get<Warehouse[]>("/warehouses/");
+      const token = await getAuthToken();
+      const data = await api.get<Warehouse[]>("/warehouses/", token || undefined);
       setWarehouses(data);
     } catch (err: any) {
       console.error("Failed to fetch warehouses:", err);
     }
-  }, []);
+  }, [getAuthToken]);
 
   const addWarehouse = async (newWarehouse: Omit<Warehouse, "id" | "created_at" | "updated_at">) => {
     const created = await api.post<Warehouse>("/warehouses/", newWarehouse);
@@ -896,8 +980,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchWarehouses();
-  }, [fetchWarehouses]);
+    if (!warehouses.length) fetchWarehouses();
+  }, [accessToken, warehouses, fetchWarehouses]);
 
   // Inventory State & Modals
   const [inventories, setInventories] = useState<Inventory[]>([]);
@@ -962,7 +1046,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const fetchInventories = useCallback(async () => {
     try {
-      const data = await api.get<Inventory[]>("/inventories/");
+      const token = await getAuthToken();
+      const data = await api.get<Inventory[]>("/inventories/", token || undefined);
       const mapped = data.map((inv) =>
         enrichInventoryWithRelationNames(inv, productVariants, warehouses, products)
       );
@@ -970,7 +1055,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error("Failed to fetch inventories:", err);
     }
-  }, [productVariants, warehouses, products, enrichInventoryWithRelationNames]);
+  }, [productVariants, warehouses, products, enrichInventoryWithRelationNames, getAuthToken]);
 
   const addInventory = async (newInv: Omit<Inventory, "id" | "updated_at">) => {
     const payload = {
@@ -1005,21 +1090,22 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (productVariants.length >= 0 || warehouses.length >= 0) {
-      fetchInventories();
+      if (!inventories.length) fetchInventories();
     }
-  }, [productVariants, warehouses, fetchInventories]);
+  }, [productVariants, warehouses, accessToken, inventories, fetchInventories]);
 
 
   // Place inside `AdminProvider` function:
   const fetchCarts = useCallback(async () => {
     try {
-      const data = await api.get<Cart[]>("/carts/");
+      const token = await getAuthToken();
+      const data = await api.get<Cart[]>("/carts/", token || undefined);
       const enriched = data.map((c) => enrichCartWithUserEmail(c, users));
       setCarts(enriched);
     } catch (err: any) {
       console.error("Failed to fetch carts:", err);
     }
-  }, [users, enrichCartWithUserEmail]);
+  }, [users, enrichCartWithUserEmail, getAuthToken]);
 
   const addCart = async (newCart: Omit<Cart, "id" | "created_at" | "updated_at">) => {
     const payload = {
@@ -1050,9 +1136,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (users.length >= 0) {
-      fetchCarts();
+      if (!carts.length) fetchCarts();
     }
-  }, [users, fetchCarts]);
+  }, [users, accessToken, carts, fetchCarts]);
 
 
   // CartItems State & Modals
@@ -1114,7 +1200,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const fetchCartItems = useCallback(async () => {
     try {
-      const data = await api.get<CartItem[]>("/cart-items/");
+      const token = await getAuthToken();
+      const data = await api.get<CartItem[]>("/cart-items/", token || undefined);
       const enriched = data.map((item) =>
         enrichCartItemWithRelations(item, carts, productVariants, products, users)
       );
@@ -1122,7 +1209,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error("Failed to fetch cart items:", err);
     }
-  }, [carts, productVariants, products, users, enrichCartItemWithRelations]);
+  }, [carts, productVariants, products, users, enrichCartItemWithRelations, getAuthToken]);
 
   const addCartItem = async (newItem: Omit<CartItem, "id" | "added_at">) => {
     const payload = {
@@ -1154,19 +1241,20 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (carts.length >= 0 && productVariants.length >= 0) {
-      fetchCartItems();
+      if (!cartItems.length) fetchCartItems();
     }
-  }, [carts, productVariants, fetchCartItems]);
+  }, [carts, productVariants, accessToken, cartItems, fetchCartItems]);
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const data = await api.get<Notification[]>("/notifications/");
+      const token = await getAuthToken();
+      const data = await api.get<Notification[]>("/notifications/", token || undefined);
       const enriched = data.map((n) => enrichNotificationWithUserEmail(n, users));
       setNotifications(enriched);
     } catch (err: any) {
       console.error("Failed to fetch notifications:", err);
     }
-  }, [users, enrichNotificationWithUserEmail]);
+  }, [users, enrichNotificationWithUserEmail, getAuthToken]);
 
   const addNotification = async (data: Omit<Notification, "id" | "created_at">) => {
     const payload = {
@@ -1195,27 +1283,29 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (users.length > 0) {
-      fetchNotifications();
+      if (!notifications.length) fetchNotifications();
     }
-  }, [users, fetchNotifications]);
+  }, [users, accessToken, notifications, fetchNotifications]);
   const fetchAttributeValues = useCallback(async () => {
     try {
-      const data = await api.get<AttributeValue[]>("/attribute-values/");
+      const token = await getAuthToken();
+      const data = await api.get<AttributeValue[]>("/attribute-values/", token || undefined);
       setAttributeValues(data);
     } catch (err: any) {
       console.error("Failed to fetch attribute values:", err);
     }
-  }, []);
+  }, [getAuthToken]);
 
   const fetchProductVariants = useCallback(async () => {
     try {
-      const data = await api.get<ProductVariant[]>("/product-variants/");
+      const token = await getAuthToken();
+      const data = await api.get<ProductVariant[]>("/product-variants/", token || undefined);
       const mapped = data.map((v) => enrichVariantWithRelationNames(v, products));
       setProductVariants(mapped);
     } catch (err: any) {
       console.error("Failed to fetch product variants:", err);
     }
-  }, [products, enrichVariantWithRelationNames]);
+  }, [products, enrichVariantWithRelationNames, getAuthToken]);
 
   const addProductVariant = async (newVariant: FormData | Partial<ProductVariant>) => {
     const response = await api.post<ProductVariant>("/product-variants/", newVariant);
@@ -1238,14 +1328,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchAttributeValues();
-  }, [fetchAttributeValues]);
+    if (!attributeValues.length) fetchAttributeValues();
+  }, [accessToken, attributeValues, fetchAttributeValues]);
 
   useEffect(() => {
     if (products.length > 0) {
-      fetchProductVariants();
+      if (!productVariants.length) fetchProductVariants();
     }
-  }, [products, fetchProductVariants]);
+  }, [products, accessToken, productVariants, fetchProductVariants]);
 
 
   // Attribute Values CRUD Actions
@@ -1303,7 +1393,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const fetchOrderItems = useCallback(async () => {
     try {
-      const data = await api.get<OrderItem[]>("/order-items/");
+      const token = await getAuthToken();
+      const data = await api.get<OrderItem[]>("/order-items/", token || undefined);
       const enriched = data.map((item) =>
         enrichOrderItemWithRelations(item, orders, products, productVariants, users)
       );
@@ -1311,7 +1402,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error("Failed to fetch order items:", err);
     }
-  }, [orders, products, productVariants, users, enrichOrderItemWithRelations]);
+  }, [orders, products, productVariants, users, enrichOrderItemWithRelations, getAuthToken]);
 
   const addOrderItem = async (newItem: Omit<OrderItem, "id" | "subtotal">) => {
     const payload = {
@@ -1356,21 +1447,22 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (orders.length >= 0 && products.length >= 0 && productVariants.length >= 0) {
-      fetchOrderItems();
+      if (!orderItems.length) fetchOrderItems();
     }
-  }, [orders, products, productVariants, fetchOrderItems]);
+  }, [orders, products, productVariants, accessToken, orderItems, fetchOrderItems]);
 
 
 
   const fetchPayments = useCallback(async () => {
     try {
-      const data = await api.get<Payment[]>("/payments/");
+      const token = await getAuthToken();
+      const data = await api.get<Payment[]>("/payments/", token || undefined);
       const enriched = data.map((p) => enrichPaymentWithOrderDetails(p, orders, users));
       setPayments(enriched);
     } catch (err: any) {
       console.error("Failed to fetch payments:", err);
     }
-  }, [orders, users, enrichPaymentWithOrderDetails]);
+  }, [orders, users, enrichPaymentWithOrderDetails, getAuthToken]);
 
   const addPayment = async (newPayment: Omit<Payment, "id" | "created_at">) => {
     const payload = {
@@ -1401,9 +1493,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (orders.length >= 0) {
-      fetchPayments();
+      if (!payments.length) fetchPayments();
     }
-  }, [orders, fetchPayments]);
+  }, [orders, accessToken, payments, fetchPayments]);
 
 
   // ShippingMethods State & Modals
@@ -1415,12 +1507,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // ShippingMethods CRUD Operations
   const fetchShippingMethods = useCallback(async () => {
     try {
-      const data = await api.get<ShippingMethod[]>("/shipping-methods/");
+
+      const token = await getAuthToken();
+      //if (!token) return;
+      const data = await api.getWithToken<ShippingMethod[]>("/shipping-methods/", token ?? "");
       setShippingMethods(data);
     } catch (err: any) {
       console.error("Failed to fetch shipping methods:", err);
     }
-  }, []);
+  }, [getAuthToken]);
 
   const addShippingMethod = async (newMethod: Omit<ShippingMethod, "id">) => {
     const payload = {
@@ -1450,8 +1545,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchShippingMethods();
-  }, [fetchShippingMethods]);
+    if (!shippingMethods.length) fetchShippingMethods();
+  }, [accessToken, shippingMethods, fetchShippingMethods]);
 
 
 
@@ -1503,7 +1598,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Fetch Shipments API
   const fetchShipments = useCallback(async () => {
     try {
-      const data = await api.get<Shipment[]>("/shipments/");
+      const token = await getAuthToken();
+      const data = await api.get<Shipment[]>("/shipments/", token || undefined);
       const enriched = data.map((item) =>
         enrichShipmentWithRelations(item, orders, shippingMethods, users)
       );
@@ -1511,7 +1607,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error("Failed to fetch shipments:", err);
     }
-  }, [orders, shippingMethods, users, enrichShipmentWithRelations]);
+  }, [orders, shippingMethods, users, enrichShipmentWithRelations, getAuthToken]);
+  // useEffect(() => {
+  //   if (!shipments.length) fetchShipments();
+  // }, [accessToken, shipments, fetchShipments]);
 
   // Add Shipment
   const addShipment = async (newShipment: Omit<Shipment, "id">) => {
@@ -1552,9 +1651,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Auto-fetch effect for Shipments when dependent relational data is available
   useEffect(() => {
     if (orders.length >= 0 && shippingMethods.length >= 0) {
-      fetchShipments();
+      if (!shipments.length) fetchShipments();
+
     }
-  }, [orders, shippingMethods, fetchShipments]);
+  }, [orders, shippingMethods, accessToken, shipments, fetchShipments]);
 
   // Customers CRUD
   const addCustomer = async (
@@ -1614,14 +1714,18 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Address CRUD Actions
   const fetchAddresses = useCallback(async () => {
     try {
-      const data = await api.get<Address[]>("/addresses/");
+      const token = await getAuthToken();
+
+      const data = await api.get<Address[]>("/addresses/", token || undefined);
       const enriched = data.map((addr) => enrichAddressWithUserEmail(addr, users));
       setAddresses(enriched);
     } catch (err: any) {
       console.error("Failed to fetch addresses:", err);
     }
-  }, [users, enrichAddressWithUserEmail]);
-
+  }, [users, enrichAddressWithUserEmail, getAuthToken]);
+  useEffect(() => {
+    if (!addresses.length) fetchAddresses();
+  }, [accessToken, addresses, fetchAddresses]);
   const addAddress = async (newAddr: Omit<Address, "id" | "created_at">) => {
     const payload = {
       ...newAddr,
@@ -1659,28 +1763,33 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
 
   // Fetch Testimonials
-  const fetchTestimonials = useCallback(async () => {
-    try {
-      const data = await api.get<Testimonial[]>("/testimonials/");
-      setTestimonials(data);
-    } catch (err: any) {
-      console.error("Failed to fetch testimonials:", err);
-    }
-  }, []);
+  // const fetchTestimonials = useCallback(async () => {
+  //   try {
+  //     const data = await api.get<Testimonial[]>("/testimonials/");
+  //     setTestimonials(data);
+  //   } catch (err: any) {
+  //     console.error("Failed to fetch testimonials:", err);
+  //   }
+  // }, []);
+
+  // Helper to ensure we have a valid auth token
 
   // Testimonials CRUD Operations
   const addTestimonial = async (newTestimonial: Omit<Testimonial, "id" | "created_at">) => {
-    const created = await api.post<Testimonial>("/testimonials/", newTestimonial);
+    const token = await getAuthToken();
+    const created = await api.post<Testimonial>("/testimonials/", newTestimonial, token || undefined);
     setTestimonials((prev) => [created, ...prev]);
   };
 
   const updateTestimonial = async (id: number | string, updatedFields: Partial<Testimonial>) => {
-    const response = await api.patch<Testimonial>(`/testimonials/${id}/`, updatedFields);
+    const token = await getAuthToken();
+    const response = await api.patch<Testimonial>(`/testimonials/${id}/`, updatedFields, token || undefined);
     setTestimonials((prev) => prev.map((t) => (t.id === id ? response : t)));
   };
 
   const deleteTestimonial = async (id: number | string) => {
-    await api.delete(`/testimonials/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/testimonials/${id}/`, token || undefined);
     setTestimonials((prev) => prev.filter((t) => t.id !== id));
   };
 
@@ -1694,15 +1803,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // Socials CRUD Operations
   const fetchSocials = useCallback(async () => {
     try {
-      const data = await api.get<Social[]>("/socials/");
+      const token = await getAuthToken();
+      const data = await api.get<Social[]>("/socials/", token || undefined);
       setSocials(data);
     } catch (err: any) {
       console.error("Failed to fetch socials:", err);
     }
-  }, []);
+  }, [getAuthToken]);
 
   const addSocial = async (newSocial: Omit<Social, "id" | "created_at">) => {
-    const created = await api.post<Social>("/socials/", newSocial);
+    const token = await getAuthToken();
+    const created = await api.post<Social>("/socials/", newSocial, token || undefined);
     setSocials((prev) => [created, ...prev]);
   };
 
@@ -1716,10 +1827,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setSocials((prev) => prev.filter((s) => s.id !== id));
   };
 
+  // useEffect(() => {
+  //   fetchSocials();
+  // }, [fetchSocials]);
   useEffect(() => {
-    fetchSocials();
-  }, [fetchSocials]);
-
+    if (!socials.length) fetchSocials();   // empty array → fetch → new empty array → fetch...
+  }, [socials, accessToken, fetchSocials]);
   //const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
   const unreadMessagesCount = messages.filter((m) => m.unread).length;
 

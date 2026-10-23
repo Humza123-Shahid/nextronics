@@ -241,7 +241,7 @@ class Social(models.Model):
 class Notification(models.Model):
     TYPE_CHOICES = [('order', 'Order'), ('promo', 'Promotion'), ('system', 'System')]
  
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
     notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='system')
     title = models.CharField(max_length=255)
     message = models.TextField()

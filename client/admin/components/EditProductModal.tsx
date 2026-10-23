@@ -82,7 +82,8 @@ export default function EditProductModal() {
     price: "",
     compare_at_price: "",
     cost_price: "",
-    stock_quantity: "",
+    stock_quantity: 0,
+    // stock_quantity: "",
     tax_class: "standard",
     weight_kg: "",
     dimensions: "",
@@ -215,7 +216,9 @@ export default function EditProductModal() {
         data.append("cost_price", String(formData.cost_price));
       }
 
-      data.append("stock_quantity", String(Number(formData.stock_quantity) || 0));
+      // data.append("stock_quantity", String(Number(formData.stock_quantity) || 0));
+      data.append("stock_quantity", formData.stock_quantity || 0);
+
       data.append("tax_class", formData.tax_class || "standard");
 
       if (formData.weight_kg !== "" && formData.weight_kg !== null) {
@@ -272,9 +275,14 @@ export default function EditProductModal() {
           data.append("attributes", formData.attributes);
         }
       }
+      const payload = {
+        ...formData,
+        name: formData.name,
+        stock_quantity: formData.stock_quantity,
 
+      };
       if (updateProduct) {
-        await updateProduct(selectedProductForEdit.id, data);
+        await updateProduct(selectedProductForEdit.id, data, payload);
       }
       setSelectedProductForEdit(null);
     } catch (err) {
@@ -470,7 +478,8 @@ export default function EditProductModal() {
               <input
                 type="number"
                 name="stock_quantity"
-                value={formData.stock_quantity ?? ""}
+                // value={formData.stock_quantity ?? ""}
+                value={formData.stock_quantity ?? 0}
                 onChange={handleInputChange}
                 required
                 className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"

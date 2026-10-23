@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { setAuthCookie, deleteAuthCookie } from "../actions/auth";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
 import {
   Menu,
   Search,
@@ -20,11 +22,13 @@ import {
   AlertTriangle,
   Package,
   DollarSign,
+  Server,
   X,
 } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
 
 export default function Header() {
+  const { logout } = useAuth();
   const router = useRouter();
   const {
     sidebarOpen,
@@ -90,7 +94,32 @@ export default function Header() {
   //       .slice(0, 3),
   //   }
   //   : null;
+  function formatDateTime(isoString: string): string {
+    const date = new Date(isoString);
 
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    }).replace(',', '');
+  }
+  const sortedNotifications = useMemo(() => {
+    return [...notifications].sort((a, b) => {
+      // unread first
+      if (a.is_read !== b.is_read) {
+        return Number(a.is_read) - Number(b.is_read);
+      }
+      // within the same group, newest first
+      return (
+        new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime()
+      );
+    });
+  }, [notifications]);
   return (
     <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-[#2E3A47] bg-[#1C2434]/95 px-4 sm:px-6 lg:px-8 backdrop-blur-md transition-colors dark:border-[#2E3A47] dark:bg-[#1C2434]/95">
       {/* Left side: Hamburger toggle + Search bar */}
@@ -274,28 +303,33 @@ export default function Header() {
               </div>
 
               <div className="max-h-72 overflow-y-auto divide-y divide-[#2E3A47]/60">
-                {notifications.map((n) => (
+                {/* {notifications.map((n) => ( */}
+                {sortedNotifications.map((n) => (
+                  n.notification_type == "system" &&
                   <div
                     key={n.id}
-                    onClick={() => markNotificationRead(n.id)}
-                    className={`flex items-start gap-3 p-3.5 hover:bg-[#24303F] cursor-pointer transition-colors ${!n.read ? "bg-[#24303F]/50" : ""
+                    // onClick={() => markNotificationRead(Number(n.id))}
+                    onClick={() => markNotificationRead(n.id!)}
+                    className={`flex items-start gap-3 p-3.5 hover:bg-[#24303F] cursor-pointer transition-colors ${!n.is_read ? "bg-[#24303F]/50" : ""
                       }`}
                   >
                     <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
-                      {n.type === "order" ? (
+                      {/* {n.notification_type === "order" ? (
                         <Package className="h-4 w-4" />
-                      ) : n.type === "stock" ? (
+                      ) : n.notification_type === "stock" ? (
                         <AlertTriangle className="h-4 w-4 text-amber-400" />
                       ) : (
                         <DollarSign className="h-4 w-4 text-emerald-400" />
-                      )}
+                      )} */}
+                      <Server className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate">{n.title}</p>
-                      <p className="text-[11px] text-[#8A99AD] line-clamp-2 mt-0.5">{n.description}</p>
-                      <span className="text-[10px] text-[#8A99AD]/70 mt-1 block">{n.time}</span>
+                      <p className="text-[11px] text-[#8A99AD] line-clamp-2 mt-0.5">{n.message}</p>
+                      {/* <span className="text-[10px] text-[#8A99AD]/70 mt-1 block">{n.created_at}</span> */}
+                      <span className="text-[10px] text-[#8A99AD]/70 mt-1 block">{formatDateTime(n.created_at!)}</span>
                     </div>
-                    {!n.read && (
+                    {!n.is_read && (
                       <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
                     )}
                   </div>
@@ -420,6 +454,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => {
+                    logout();
                     setUserDropdownOpen(false);
                     router.push("/");
                   }}

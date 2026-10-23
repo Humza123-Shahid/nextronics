@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import React, { Suspense } from "react";
+import { AdminProvider } from "@/admin/context/AdminContext";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -30,23 +31,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
-    >
-      <body className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-        <AuthProvider>
-          {/* <Header /> */}
-          <Suspense fallback={null}>
-            <AnalyticsTracker />
-          </Suspense>
-          <main className="flex-1">
-            {children}
-          </main>
-          {/* <Footer /> */}
-        </AuthProvider>
-      </body>
-    </html>
+    <AdminProvider>
+      <html
+        lang="en"
+        className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
+      >
+        <body className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+          <AuthProvider>
+            {/* <Header /> */}
+            <Suspense fallback={null}>
+              <AnalyticsTracker />
+            </Suspense>
+            <main className="flex-1">
+              {children}
+            </main>
+            {/* <Footer /> */}
+          </AuthProvider>
+        </body>
+      </html>
+    </AdminProvider>
   );
 }
 

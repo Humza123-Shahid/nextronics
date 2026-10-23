@@ -60,7 +60,9 @@ interface AdminContextType {
 
   // Products CRUD
   addProduct: (product: FormData | Record<string, any>) => Promise<void>;
-  updateProduct: (id: number | string, product: FormData | Record<string, any>) => Promise<void>;
+  // updateProduct: (id: number | string, product: FormData | Record<string, any>) => Promise<void>;
+  updateProduct: (id: number | string, product: FormData | Record<string, any>, stock: Partial<Product>) => Promise<void>;
+
   // addProduct: (product: Omit<Product, "id" | "created_at" | "updated_at">) => Promise<void>;
   // updateProduct: (id: number | string, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: number | string) => Promise<void>;
@@ -302,10 +304,12 @@ interface AdminContextType {
   // Notifications & Messages
   //notifications: NotificationItem[];
   // markNotificationRead: (id: string) => void;
-  // markAllNotificationsRead: () => void;
-  // unreadNotificationsCount: number;
-  // messages: ChatMessage[];
-  // unreadMessagesCount: number;
+  markNotificationRead: (id: number) => void
+  markAllNotificationsRead: () => void;
+  unreadNotificationsCount: number;
+  messages: ChatMessage[];
+  unreadMessagesCount: number;
+  setNotifications: (notifications: Notification[]) => void;
 
   // Global Search
   searchQuery: string;
@@ -891,17 +895,20 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Brands CRUD Operations
   const addBrand = async (newBrand: Omit<Brand, "id"> | FormData) => {
-    const created = await api.post<Brand>("/brands/", newBrand);
+    const token = await getAuthToken();
+    const created = await api.post<Brand>("/brands/", newBrand, token || undefined);
     setBrands((prev) => [created, ...prev]);
   };
 
   const updateBrand = async (id: number | string, updatedBrand: Partial<Brand> | FormData) => {
-    const response = await api.patch<Brand>(`/brands/${id}/`, updatedBrand);
+    const token = await getAuthToken();
+    const response = await api.patch<Brand>(`/brands/${id}/`, updatedBrand, token || undefined);
     setBrands((prev) => prev.map((b) => (b.id === id ? response : b)));
   };
 
   const deleteBrand = async (id: number | string) => {
-    await api.delete(`/brands/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/brands/${id}/`, token || undefined);
     setBrands((prev) => prev.filter((b) => b.id !== id));
   };
 
@@ -933,18 +940,31 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   // };
   // Inside AdminProvider implementation:
   const addProduct = async (newProd: FormData | Record<string, any>) => {
-    const response = await api.post<Product>("/products/", newProd);
+    const token = await getAuthToken();
+    const response = await api.post<Product>("/products/", newProd, token || undefined);
     const enriched = enrichProductWithRelationNames(response, categories, brands);
     setProducts((prev) => [enriched, ...prev]);
   };
 
-  const updateProduct = async (id: number | string, updatedFields: FormData | Record<string, any>) => {
-    const response = await api.patch<Product>(`/products/${id}/`, updatedFields);
+  // const updateProduct = async (id: number | string, updatedFields: FormData | Record<string, any>) => {
+  const updateProduct = async (id: number | string, updatedFields: FormData | Record<string, any>, stock: Partial<Product>) => {
+
+    const token = await getAuthToken();
+    const response = await api.patch<Product>(`/products/${id}/`, updatedFields, token || undefined);
     const enriched = enrichProductWithRelationNames(response, categories, brands);
     setProducts((prev) => prev.map((p) => (p.id === id ? enriched : p)));
+    if (Number(stock.stock_quantity) === 0) {
+      const response = await api.post<Notification>(`/notifications/`, { notification_type: "system", title: "Product Out of Stock", message: `Product ${stock.name} is out of stock` }, token || undefined);
+      setNotifications((prev) => [response, ...prev]);
+    }
+    else if (Number(stock.stock_quantity) < 5) {
+      const response = await api.post<Notification>(`/notifications/`, { notification_type: "system", title: "Low Stock", message: `Product ${stock.name} has low stock (${stock.stock_quantity} left)` }, token || undefined);
+      setNotifications((prev) => [response, ...prev]);
+    }
   };
   const deleteProduct = async (id: number | string) => {
-    await api.delete(`/products/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/products/${id}/`, token || undefined);
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
   // Warehouses State & Modals
@@ -965,17 +985,20 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [getAuthToken]);
 
   const addWarehouse = async (newWarehouse: Omit<Warehouse, "id" | "created_at" | "updated_at">) => {
-    const created = await api.post<Warehouse>("/warehouses/", newWarehouse);
+    const token = await getAuthToken();
+    const created = await api.post<Warehouse>("/warehouses/", newWarehouse, token || undefined);
     setWarehouses((prev) => [created, ...prev]);
   };
 
   const updateWarehouse = async (id: number | string, updatedFields: Partial<Warehouse>) => {
-    const updated = await api.patch<Warehouse>(`/warehouses/${id}/`, updatedFields);
+    const token = await getAuthToken();
+    const updated = await api.patch<Warehouse>(`/warehouses/${id}/`, updatedFields, token || undefined);
     setWarehouses((prev) => prev.map((w) => (w.id === id ? updated : w)));
   };
 
   const deleteWarehouse = async (id: number | string) => {
-    await api.delete(`/warehouses/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/warehouses/${id}/`, token || undefined);
     setWarehouses((prev) => prev.filter((w) => w.id !== id));
   };
 
@@ -1058,6 +1081,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [productVariants, warehouses, products, enrichInventoryWithRelationNames, getAuthToken]);
 
   const addInventory = async (newInv: Omit<Inventory, "id" | "updated_at">) => {
+    const token = await getAuthToken();
     const payload = {
       ...newInv,
       product_variant: Number(newInv.product_variant),
@@ -1065,12 +1089,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       quantity: Number(newInv.quantity),
       reserved_quantity: Number(newInv.reserved_quantity),
     };
-    const created = await api.post<Inventory>("/inventories/", payload);
+    const created = await api.post<Inventory>("/inventories/", payload, token || undefined);
     const enriched = enrichInventoryWithRelationNames(created, productVariants, warehouses);
     setInventories((prev) => [enriched, ...prev]);
   };
 
   const updateInventory = async (id: number | string, updatedFields: Partial<Inventory>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.product_variant !== undefined && { product_variant: Number(updatedFields.product_variant) }),
@@ -1078,13 +1103,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       ...(updatedFields.quantity !== undefined && { quantity: Number(updatedFields.quantity) }),
       ...(updatedFields.reserved_quantity !== undefined && { reserved_quantity: Number(updatedFields.reserved_quantity) }),
     };
-    const updated = await api.patch<Inventory>(`/inventories/${id}/`, payload);
+    const updated = await api.patch<Inventory>(`/inventories/${id}/`, payload, token || undefined);
     const enriched = enrichInventoryWithRelationNames(updated, productVariants, warehouses);
     setInventories((prev) => prev.map((item) => (item.id === id ? enriched : item)));
   };
 
   const deleteInventory = async (id: number | string) => {
-    await api.delete(`/inventories/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/inventories/${id}/`, token || undefined);
     setInventories((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -1108,29 +1134,32 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [users, enrichCartWithUserEmail, getAuthToken]);
 
   const addCart = async (newCart: Omit<Cart, "id" | "created_at" | "updated_at">) => {
+    const token = await getAuthToken();
     const payload = {
       ...newCart,
       user: newCart.user ? Number(newCart.user) : null,
     };
-    const created = await api.post<Cart>("/carts/", payload);
+    const created = await api.post<Cart>("/carts/", payload, token || undefined);
     const enriched = enrichCartWithUserEmail(created, users);
     setCarts((prev) => [enriched, ...prev]);
   };
 
   const updateCart = async (id: number | string, updatedFields: Partial<Cart>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.user !== undefined && {
         user: updatedFields.user ? Number(updatedFields.user) : null,
       }),
     };
-    const updated = await api.patch<Cart>(`/carts/${id}/`, payload);
+    const updated = await api.patch<Cart>(`/carts/${id}/`, payload, token || undefined);
     const enriched = enrichCartWithUserEmail(updated, users);
     setCarts((prev) => prev.map((c) => (c.id === id ? enriched : c)));
   };
 
   const deleteCart = async (id: number | string) => {
-    await api.delete(`/carts/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/carts/${id}/`, token || undefined);
     setCarts((prev) => prev.filter((c) => c.id !== id));
   };
 
@@ -1212,30 +1241,33 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [carts, productVariants, products, users, enrichCartItemWithRelations, getAuthToken]);
 
   const addCartItem = async (newItem: Omit<CartItem, "id" | "added_at">) => {
+    const token = await getAuthToken();
     const payload = {
       cart: Number(newItem.cart),
       product_variant: Number(newItem.product_variant),
       quantity: Number(newItem.quantity),
     };
-    const created = await api.post<CartItem>("/cart-items/", payload);
+    const created = await api.post<CartItem>("/cart-items/", payload, token || undefined);
     const enriched = enrichCartItemWithRelations(created, carts, productVariants, products, users);
     setCartItems((prev) => [enriched, ...prev]);
   };
 
   const updateCartItem = async (id: number | string, updatedFields: Partial<CartItem>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.cart !== undefined && { cart: Number(updatedFields.cart) }),
       ...(updatedFields.product_variant !== undefined && { product_variant: Number(updatedFields.product_variant) }),
       ...(updatedFields.quantity !== undefined && { quantity: Number(updatedFields.quantity) }),
     };
-    const updated = await api.patch<CartItem>(`/cart-items/${id}/`, payload);
+    const updated = await api.patch<CartItem>(`/cart-items/${id}/`, payload, token || undefined);
     const enriched = enrichCartItemWithRelations(updated, carts, productVariants, products, users);
     setCartItems((prev) => prev.map((item) => (item.id === id ? enriched : item)));
   };
 
   const deleteCartItem = async (id: number | string) => {
-    await api.delete(`/cart-items/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/cart-items/${id}/`, token || undefined);
     setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -1257,34 +1289,42 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [users, enrichNotificationWithUserEmail, getAuthToken]);
 
   const addNotification = async (data: Omit<Notification, "id" | "created_at">) => {
+    const token = await getAuthToken();
     const payload = {
       ...data,
       user: Number(data.user),
     };
-    const created = await api.post<Notification>("/notifications/", payload);
+    const created = await api.post<Notification>("/notifications/", payload, token || undefined);
     const enriched = enrichNotificationWithUserEmail(created, users);
     setNotifications((prev) => [enriched, ...prev]);
   };
 
   const updateNotification = async (id: number | string, data: Partial<Notification>) => {
+    const token = await getAuthToken();
     const payload = {
       ...data,
       ...(data.user !== undefined && { user: Number(data.user) }),
     };
-    const updated = await api.patch<Notification>(`/notifications/${id}/`, payload);
+    const updated = await api.patch<Notification>(`/notifications/${id}/`, payload, token || undefined);
     const enriched = enrichNotificationWithUserEmail(updated, users);
     setNotifications((prev) => prev.map((n) => (n.id === id ? enriched : n)));
   };
 
   const deleteNotification = async (id: number | string) => {
-    await api.delete(`/notifications/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/notifications/${id}/`, token || undefined);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   useEffect(() => {
+    console.log(notifications.length, "notifications.length")
     if (users.length > 0) {
-      if (!notifications.length) fetchNotifications();
+      if (!notifications.length) {
+        console.log("Notifications not found")
+        fetchNotifications();
+      }
     }
+    // }, [users, accessToken, notifications, fetchNotifications]);
   }, [users, accessToken, notifications, fetchNotifications]);
   const fetchAttributeValues = useCallback(async () => {
     try {
@@ -1308,7 +1348,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [products, enrichVariantWithRelationNames, getAuthToken]);
 
   const addProductVariant = async (newVariant: FormData | Partial<ProductVariant>) => {
-    const response = await api.post<ProductVariant>("/product-variants/", newVariant);
+    const token = await getAuthToken();
+    const response = await api.post<ProductVariant>("/product-variants/", newVariant, token || undefined);
     const enriched = enrichVariantWithRelationNames(response, products);
     setProductVariants((prev) => [enriched, ...prev]);
   };
@@ -1317,13 +1358,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     id: number | string,
     updatedFields: FormData | Partial<ProductVariant>
   ) => {
-    const response = await api.patch<ProductVariant>(`/product-variants/${id}/`, updatedFields);
+    const token = await getAuthToken();
+    const response = await api.patch<ProductVariant>(`/product-variants/${id}/`, updatedFields, token || undefined);
     const enriched = enrichVariantWithRelationNames(response, products);
     setProductVariants((prev) => prev.map((v) => (v.id === id ? enriched : v)));
   };
 
   const deleteProductVariant = async (id: number | string) => {
-    await api.delete(`/product-variants/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/product-variants/${id}/`, token || undefined);
     setProductVariants((prev) => prev.filter((v) => v.id !== id));
   };
 
@@ -1340,17 +1383,20 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Attribute Values CRUD Actions
   const addAttributeValue = async (newAttrVal: Omit<AttributeValue, "id">) => {
-    const created = await api.post<AttributeValue>("/attribute-values/", newAttrVal);
+    const token = await getAuthToken();
+    const created = await api.post<AttributeValue>("/attribute-values/", newAttrVal, token || undefined);
     setAttributeValues((prev) => [created, ...prev]);
   };
 
   const updateAttributeValue = async (id: number | string, updatedFields: Partial<AttributeValue>) => {
-    const updated = await api.patch<AttributeValue>(`/attribute-values/${id}/`, updatedFields);
+    const token = await getAuthToken();
+    const updated = await api.patch<AttributeValue>(`/attribute-values/${id}/`, updatedFields, token || undefined);
     setAttributeValues((prev) => prev.map((item) => (item.id === id ? updated : item)));
   };
 
   const deleteAttributeValue = async (id: number | string) => {
-    await api.delete(`/attribute-values/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/attribute-values/${id}/`, token || undefined);
     setAttributeValues((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -1370,19 +1416,28 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   //   setOrders((prev) => prev.filter((o) => o.id !== id));
   // };
   const addOrder = async (orderData: Partial<Order>) => {
-    const newOrder = await api.post<Order>("/orders/", orderData);
+    const token = await getAuthToken();
+    const newOrder = await api.post<Order>("/orders/", orderData, token || undefined);
     setOrders((prev) => [enrichOrderWithRelationNames(newOrder, users, addresses), ...prev]);
+    const userId = newOrder.user_id ?? (typeof newOrder.user === "object" ? newOrder.user?.id : newOrder.user);
+    const matchedUser = users.find((u) => String(u.id) === String(userId));
+    const response = await api.post<Notification>(`/notifications/`, { notification_type: "system", title: "New order placed", message: `Order #${newOrder.order_number} placed by ${matchedUser?.email}. Total: ${newOrder.currency} ${newOrder.grand_total}` }, token || undefined);
+    setNotifications((prev) => [response, ...prev]);
+
+
   };
 
   const updateOrder = async (id: string | number, orderData: Partial<Order>) => {
-    const updated = await api.patch<Order>(`/orders/${id}/`, orderData);
+    const token = await getAuthToken();
+    const updated = await api.patch<Order>(`/orders/${id}/`, orderData, token || undefined);
     setOrders((prev) =>
       prev.map((o) => (o.id === id ? enrichOrderWithRelationNames(updated, users, addresses) : o))
     );
   };
 
   const deleteOrder = async (id: string | number) => {
-    await api.delete(`/orders/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/orders/${id}/`, token || undefined);
     setOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
@@ -1403,8 +1458,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to fetch order items:", err);
     }
   }, [orders, products, productVariants, users, enrichOrderItemWithRelations, getAuthToken]);
-
   const addOrderItem = async (newItem: Omit<OrderItem, "id" | "subtotal">) => {
+    const token = await getAuthToken();
     const payload = {
       ...newItem,
       order: Number(newItem.order),
@@ -1414,12 +1469,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       quantity: Number(newItem.quantity),
       subtotal: (Number(newItem.unit_price) * Number(newItem.quantity)).toFixed(2),
     };
-    const created = await api.post<OrderItem>("/order-items/", payload);
+    const created = await api.post<OrderItem>("/order-items/", payload, token || undefined);
     const enriched = enrichOrderItemWithRelations(created, orders, products, productVariants, users);
     setOrderItems((prev) => [enriched, ...prev]);
   };
 
   const updateOrderItem = async (id: number | string, updatedFields: Partial<OrderItem>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.order !== undefined && { order: Number(updatedFields.order) }),
@@ -1435,13 +1491,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       payload.subtotal = (Number(price) * Number(qty)).toFixed(2);
     }
 
-    const updated = await api.patch<OrderItem>(`/order-items/${id}/`, payload);
+    const updated = await api.patch<OrderItem>(`/order-items/${id}/`, payload, token || undefined);
     const enriched = enrichOrderItemWithRelations(updated, orders, products, productVariants, users);
     setOrderItems((prev) => prev.map((item) => (item.id === id ? enriched : item)));
   };
 
   const deleteOrderItem = async (id: number | string) => {
-    await api.delete(`/order-items/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/order-items/${id}/`, token || undefined);
     setOrderItems((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -1465,29 +1522,32 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [orders, users, enrichPaymentWithOrderDetails, getAuthToken]);
 
   const addPayment = async (newPayment: Omit<Payment, "id" | "created_at">) => {
+    const token = await getAuthToken();
     const payload = {
       ...newPayment,
       order: Number(newPayment.order),
       amount: Number(newPayment.amount),
     };
-    const created = await api.post<Payment>("/payments/", payload);
+    const created = await api.post<Payment>("/payments/", payload, token || undefined);
     const enriched = enrichPaymentWithOrderDetails(created, orders, users);
     setPayments((prev) => [enriched, ...prev]);
   };
 
   const updatePayment = async (id: number | string, updatedFields: Partial<Payment>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.order !== undefined && { order: Number(updatedFields.order) }),
       ...(updatedFields.amount !== undefined && { amount: Number(updatedFields.amount) }),
     };
-    const updated = await api.patch<Payment>(`/payments/${id}/`, payload);
+    const updated = await api.patch<Payment>(`/payments/${id}/`, payload, token || undefined);
     const enriched = enrichPaymentWithOrderDetails(updated, orders, users);
     setPayments((prev) => prev.map((p) => (p.id === id ? enriched : p)));
   };
 
   const deletePayment = async (id: number | string) => {
-    await api.delete(`/payments/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/payments/${id}/`, token || undefined);
     setPayments((prev) => prev.filter((p) => p.id !== id));
   };
 
@@ -1518,29 +1578,32 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [getAuthToken]);
 
   const addShippingMethod = async (newMethod: Omit<ShippingMethod, "id">) => {
+    const token = await getAuthToken();
     const payload = {
       ...newMethod,
       cost: Number(newMethod.cost),
       estimated_days_min: Number(newMethod.estimated_days_min),
       estimated_days_max: Number(newMethod.estimated_days_max),
     };
-    const created = await api.post<ShippingMethod>("/shipping-methods/", payload);
+    const created = await api.post<ShippingMethod>("/shipping-methods/", payload, token || undefined);
     setShippingMethods((prev) => [created, ...prev]);
   };
 
   const updateShippingMethod = async (id: number | string, updatedFields: Partial<ShippingMethod>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.cost !== undefined && { cost: Number(updatedFields.cost) }),
       ...(updatedFields.estimated_days_min !== undefined && { estimated_days_min: Number(updatedFields.estimated_days_min) }),
       ...(updatedFields.estimated_days_max !== undefined && { estimated_days_max: Number(updatedFields.estimated_days_max) }),
     };
-    const updated = await api.patch<ShippingMethod>(`/shipping-methods/${id}/`, payload);
+    const updated = await api.patch<ShippingMethod>(`/shipping-methods/${id}/`, payload, token || undefined);
     setShippingMethods((prev) => prev.map((item) => (item.id === id ? updated : item)));
   };
 
   const deleteShippingMethod = async (id: number | string) => {
-    await api.delete(`/shipping-methods/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/shipping-methods/${id}/`, token || undefined);
     setShippingMethods((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -1614,6 +1677,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Add Shipment
   const addShipment = async (newShipment: Omit<Shipment, "id">) => {
+    const token = await getAuthToken();
     const payload = {
       ...newShipment,
       order: Number(newShipment.order),
@@ -1621,13 +1685,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       shipped_at: newShipment.shipped_at || null,
       delivered_at: newShipment.delivered_at || null,
     };
-    const created = await api.post<Shipment>("/shipments/", payload);
+    const created = await api.post<Shipment>("/shipments/", payload, token || undefined);
     const enriched = enrichShipmentWithRelations(created, orders, shippingMethods, users);
     setShipments((prev) => [enriched, ...prev]);
   };
 
   // Update Shipment
   const updateShipment = async (id: number | string, updatedFields: Partial<Shipment>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.order !== undefined && { order: Number(updatedFields.order) }),
@@ -1637,14 +1702,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       ...(updatedFields.shipped_at !== undefined && { shipped_at: updatedFields.shipped_at || null }),
       ...(updatedFields.delivered_at !== undefined && { delivered_at: updatedFields.delivered_at || null }),
     };
-    const updated = await api.patch<Shipment>(`/shipments/${id}/`, payload);
+    const updated = await api.patch<Shipment>(`/shipments/${id}/`, payload, token || undefined);
     const enriched = enrichShipmentWithRelations(updated, orders, shippingMethods, users);
     setShipments((prev) => prev.map((item) => (item.id === id ? enriched : item)));
   };
 
   // Delete Shipment
   const deleteShipment = async (id: number | string) => {
-    await api.delete(`/shipments/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/shipments/${id}/`, token || undefined);
     setShipments((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -1676,34 +1742,40 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Categories CRUD
   const addCategory = async (newCat: Omit<CategoryItem, "id"> | FormData) => {
-    const created = await api.post<CategoryItem>("/categories/", newCat);
+    const token = await getAuthToken();
+    const created = await api.post<CategoryItem>("/categories/", newCat, token || undefined);
     setCategories((prev) => [created, ...prev]);
   };
 
   const updateCategory = async (id: string | number, updated: Partial<CategoryItem> | FormData) => {
-    const res = await api.patch<CategoryItem>(`/categories/${id}/`, updated);
+    const token = await getAuthToken();
+    const res = await api.patch<CategoryItem>(`/categories/${id}/`, updated, token || undefined);
     setCategories((prev) => prev.map((cat) => (cat.id === id ? res : cat)));
   };
 
   const deleteCategory = async (id: string | number) => {
-    await api.delete(`/categories/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/categories/${id}/`, token || undefined);
     setCategories((prev) => prev.filter((cat) => cat.id !== id));
   };
 
 
   // Users CRUD
   const addUser = async (user: Partial<User>) => {
-    const created = await api.post<User>("/users/", user);
+    const token = await getAuthToken();
+    const created = await api.post<User>("/users/", user, token || undefined);
     setUsers((prev) => [...prev, created]);
   };
 
   const updateUser = async (id: number | string, user: Partial<User>) => {
-    const updated = await api.patch<User>(`/users/${id}/`, user);
+    const token = await getAuthToken();
+    const updated = await api.patch<User>(`/users/${id}/`, user, token || undefined);
     setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
   };
 
   const deleteUser = async (id: number | string) => {
-    await api.delete(`/users/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/users/${id}/`, token || undefined);
     setUsers((prev) => prev.filter((u) => u.id !== id));
   };
   // Address Modal & State
@@ -1727,40 +1799,96 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (!addresses.length) fetchAddresses();
   }, [accessToken, addresses, fetchAddresses]);
   const addAddress = async (newAddr: Omit<Address, "id" | "created_at">) => {
+    const token = await getAuthToken();
     const payload = {
       ...newAddr,
       user: Number(newAddr.user),
     };
-    const created = await api.post<Address>("/addresses/", payload);
+    const created = await api.post<Address>("/addresses/", payload, token || undefined);
     const enriched = enrichAddressWithUserEmail(created, users);
     setAddresses((prev) => [enriched, ...prev]);
   };
 
   const updateAddress = async (id: number | string, updatedFields: Partial<Address>) => {
+    const token = await getAuthToken();
     const payload = {
       ...updatedFields,
       ...(updatedFields.user !== undefined && { user: Number(updatedFields.user) }),
     };
-    const updated = await api.patch<Address>(`/addresses/${id}/`, payload);
+    const updated = await api.patch<Address>(`/addresses/${id}/`, payload, token || undefined);
     const enriched = enrichAddressWithUserEmail(updated, users);
     setAddresses((prev) => prev.map((a) => (a.id === id ? enriched : a)));
   };
 
   const deleteAddress = async (id: number | string) => {
-    await api.delete(`/addresses/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/addresses/${id}/`, token || undefined);
     setAddresses((prev) => prev.filter((a) => a.id !== id));
   };
   // Notifications & Messages
-  // const markNotificationRead = (id: string) => {
-  //   setNotifications((prev) =>
-  //     prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-  //   );
+  const markNotificationRead = async (id: number) => {
+    console.log(id);
+    try {
+      const token = await getAuthToken();
+      await api.patch<Notification>(`/notifications/${id}/`, { is_read: true }, token || undefined);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    } catch (err: any) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  };
+
+  // const markAllNotificationsRead = async () => {
+  //   try {
+  //     const token = await getAuthToken();
+  //     notifications.map(async notify => {
+  //       await api.patch<Notification>(`/notifications/${notify.id}/`, { is_read: true }, token || undefined);
+  //     })
+
+  //     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  //   } catch (err: any) {
+  //     console.error("Failed to mark all notifications as read:", err);
+  //   }
+  // };
+  const markAllNotificationsRead = async () => {
+    const unread = notifications.filter((n) => !n.is_read);
+    if (!unread.length) return;
+
+    // optimistic update
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+
+    try {
+      const token = await getAuthToken();
+
+      // wait for ALL requests to finish
+      const results = await Promise.allSettled(
+        unread.map((n) =>
+          api.patch<Notification>(`/notifications/${n.id}/`, { is_read: true }, token || undefined)
+        )
+      );
+
+      // roll back only the ones that failed
+      const failedIds = unread
+        .filter((_, i) => results[i].status === "rejected")
+        .map((n) => n.id);
+
+      if (failedIds.length) {
+        console.error("Failed to mark some notifications as read:", failedIds);
+        setNotifications((prev) =>
+          prev.map((n) => (failedIds.includes(n.id) ? { ...n, is_read: false } : n))
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to mark all notifications as read:", err);
+    }
+  };
+  // const markNotificationRead = (id: number) => {
+  //   console.log(id);
+  //   updateNotification(id, { is_read: true });
   // };
 
   // const markAllNotificationsRead = () => {
-  //   setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  //   setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   // };
-
 
   // Fetch Testimonials
   // const fetchTestimonials = useCallback(async () => {
@@ -1818,12 +1946,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSocial = async (id: number | string, updatedFields: Partial<Social>) => {
-    const updated = await api.patch<Social>(`/socials/${id}/`, updatedFields);
+    const token = await getAuthToken();
+    const updated = await api.patch<Social>(`/socials/${id}/`, updatedFields, token || undefined);
     setSocials((prev) => prev.map((s) => (s.id === id ? updated : s)));
   };
 
   const deleteSocial = async (id: number | string) => {
-    await api.delete(`/socials/${id}/`);
+    const token = await getAuthToken();
+    await api.delete(`/socials/${id}/`, token || undefined);
     setSocials((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -1833,7 +1963,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!socials.length) fetchSocials();   // empty array → fetch → new empty array → fetch...
   }, [socials, accessToken, fetchSocials]);
-  //const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
+  const unreadNotificationsCount = notifications.filter((n) => !n.is_read).length;
   const unreadMessagesCount = messages.filter((m) => m.unread).length;
 
   return (
@@ -2085,12 +2215,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         setIsAddUserModalOpen,
 
         // Notifications & Messages
-        // notifications,
-        // markNotificationRead,
-        // markAllNotificationsRead,
-        // unreadNotificationsCount,
-        // messages,
-        // unreadMessagesCount,
+        //notifications,
+        markNotificationRead,
+        markAllNotificationsRead,
+        unreadNotificationsCount,
+        messages,
+        unreadMessagesCount,
+
+        setNotifications,
 
         // Search
         searchQuery,

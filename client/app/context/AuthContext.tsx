@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { setAuthCookie, deleteAuthCookie } from "@/app/actions/auth";
+import { api } from "@/admin/services/api";
+import { Notification } from "@/admin/types";
+import { useAdmin } from "@/admin/context/AdminContext";
 
 export interface AuthUser {
   id: number;
@@ -59,7 +62,10 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const {
+    notifications,
+    setNotifications
+  } = useAdmin();
   // Load persisted user on client mount
   useEffect(() => {
     try {
@@ -165,6 +171,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (storageErr) {
           console.warn("Could not save to localStorage:", storageErr);
         }
+        //const matchedUser = users.find((u) => String(u.id) === String(userId));
+        const response = await api.post<Notification>(`/notifications/`, { notification_type: "system", title: "New Customer Registration", message: `${payload.first_name} ${payload.last_name} (${payload.email}) just created an account.` }, tokens.access || undefined);
+        //setNotifications((prev) => [response, ...prev]);
+        setNotifications([response, ...notifications]);
+
         return {
           success: true,
           user: data.user,

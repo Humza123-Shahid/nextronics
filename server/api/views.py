@@ -183,8 +183,20 @@ class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdminUserCustom]
+    #permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        # If the request is a read action (list or retrieve), make it public (AllowAny)
+        if self.action in ['create']:
+            permission_classes = [AllowAny]
+        else:
+            # Otherwise, enforce your custom admin/staff check
+            permission_classes = [IsAuthenticated, IsAdminUserCustom]
+        
+        return [permission() for permission in permission_classes]
 
 
 class PageVisitViewSet(viewsets.ModelViewSet):

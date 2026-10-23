@@ -322,7 +322,7 @@ export interface Notification {
   id?: number;
   user: number; // Foreign key user ID sent to backend
   user_email?: string; // Optional email field returned by backend for display
-  notification_type: 'order' | 'promo' | 'system';
+  notification_type: 'order' | 'promo' | 'system' | 'stock';
   title: string;
   message: string;
   is_read: boolean;

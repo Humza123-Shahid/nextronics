@@ -6,7 +6,8 @@ import Footer from "./components/Footer";
 import React, { Suspense } from "react";
 import { AdminProvider } from "@/admin/context/AdminContext";
 import AnalyticsTracker from "./components/AnalyticsTracker";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+// import AdminGate from "./components/AdminGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,26 +31,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // const { isAdmin } = useAuth();
   return (
-    <AdminProvider>
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
-      >
-        <body className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-          <AuthProvider>
-            {/* <Header /> */}
-            <Suspense fallback={null}>
-              <AnalyticsTracker />
-            </Suspense>
-            <main className="flex-1">
-              {children}
-            </main>
-            {/* <Footer /> */}
-          </AuthProvider>
-        </body>
-      </html>
-    </AdminProvider>
+
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
+    >
+      <body className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+        <AuthProvider>
+          {/* <Header /> */}
+          {/* {isAdmin && <AdminProvider> */}
+          {/* <AdminGate> */}
+          <Suspense fallback={null}>
+            <AnalyticsTracker />
+          </Suspense>
+          <main className="flex-1">
+            {children}
+          </main>
+          {/* <Footer /> */}
+          {/* </AdminGate> */}
+        </AuthProvider>
+      </body>
+    </html>
   );
 }
 

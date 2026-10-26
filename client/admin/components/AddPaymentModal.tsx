@@ -5,7 +5,8 @@ import { X, Plus, CreditCard } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
 
 export default function AddPaymentModal() {
-    const { isAddPaymentModalOpen, setIsAddPaymentModalOpen, orders, addPayment } = useAdmin();
+    const { isAddPaymentModalOpen, setIsAddPaymentModalOpen, orders, users, addPayment } = useAdmin();
+    //const selID=orders?.user_id
 
     const [formData, setFormData] = useState({
         order: "",
@@ -109,11 +110,13 @@ export default function AddPaymentModal() {
                             className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                         >
                             <option value="">Select Order</option>
-                            {orders.map((ord: any) => (
-                                <option key={ord.id} value={ord.id}>
-                                    {ord.order_number || `Order #${ord.id}`} ({ord.user_email || "Guest"})
-                                </option>
-                            ))}
+                            {orders.map((ord: any) => {
+                                const matchedUser = users.find((u) => String(u.id) === String(ord.user_id));
+                                return (
+                                    <option key={ord.id} value={ord.id}>
+                                        {ord.order_number || `Order #${ord.id}`} ({matchedUser?.email || "Guest"})
+                                    </option>)
+                            })}
                         </select>
                     </div>
 

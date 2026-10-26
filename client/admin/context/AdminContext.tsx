@@ -358,7 +358,9 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
+// export function AdminProvider({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
 export function AdminProvider({ children }: { children: React.ReactNode }) {
+
   // Helper to enrich raw Address records with user email
 
   const [accessToken, setAccessToken] = useState<string | null>(() => {
@@ -614,6 +616,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchUsersAndAddresses = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const [userData, addrData] = await Promise.all([
         api.get<User[]>("/users/", token || undefined),
         api.get<Address[]>("/addresses/", token || undefined),
@@ -678,6 +682,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchOrders = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
       const data = await api.get<Order[]>("/orders/", token || undefined);
       const mapped = data.map((o) => enrichOrderWithRelationNames(o, users, addresses));
       setOrders(mapped);
@@ -779,6 +784,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = await getAuthToken();
       if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Brand[]>("/brands/", token);
       setBrands(data);
     } catch (err: any) {
@@ -835,6 +841,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       }
     }
     if (!token) return;
+    ////if (!enabled) return;
     try {
       const data = await api.getWithToken<Testimonial[]>("/testimonials/", token);
       setTestimonials(data);
@@ -977,6 +984,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchWarehouses = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      //if (!enabled) return;
+      if (!token) return;
       const data = await api.get<Warehouse[]>("/warehouses/", token || undefined);
       setWarehouses(data);
     } catch (err: any) {
@@ -1070,6 +1079,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchInventories = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Inventory[]>("/inventories/", token || undefined);
       const mapped = data.map((inv) =>
         enrichInventoryWithRelationNames(inv, productVariants, warehouses, products)
@@ -1125,6 +1136,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchCarts = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Cart[]>("/carts/", token || undefined);
       const enriched = data.map((c) => enrichCartWithUserEmail(c, users));
       setCarts(enriched);
@@ -1230,6 +1243,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchCartItems = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<CartItem[]>("/cart-items/", token || undefined);
       const enriched = data.map((item) =>
         enrichCartItemWithRelations(item, carts, productVariants, products, users)
@@ -1280,6 +1295,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchNotifications = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Notification[]>("/notifications/", token || undefined);
       const enriched = data.map((n) => enrichNotificationWithUserEmail(n, users));
       setNotifications(enriched);
@@ -1329,6 +1346,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchAttributeValues = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<AttributeValue[]>("/attribute-values/", token || undefined);
       setAttributeValues(data);
     } catch (err: any) {
@@ -1339,6 +1358,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchProductVariants = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<ProductVariant[]>("/product-variants/", token || undefined);
       const mapped = data.map((v) => enrichVariantWithRelationNames(v, products));
       setProductVariants(mapped);
@@ -1449,6 +1470,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchOrderItems = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<OrderItem[]>("/order-items/", token || undefined);
       const enriched = data.map((item) =>
         enrichOrderItemWithRelations(item, orders, products, productVariants, users)
@@ -1513,6 +1536,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchPayments = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Payment[]>("/payments/", token || undefined);
       const enriched = data.map((p) => enrichPaymentWithOrderDetails(p, orders, users));
       setPayments(enriched);
@@ -1531,6 +1556,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     const created = await api.post<Payment>("/payments/", payload, token || undefined);
     const enriched = enrichPaymentWithOrderDetails(created, orders, users);
     setPayments((prev) => [enriched, ...prev]);
+    if (newPayment.status == "failed") {
+      const response = await api.post<Notification>(`/notifications/`, { notification_type: "system", title: "Payment failed", message: `Payment failed for Order #${enriched.order_number_display} placed by ${enriched.order_display_label}. Total: $${enriched.amount}` }, token || undefined);
+      setNotifications((prev) => [response, ...prev]);
+    }
   };
 
   const updatePayment = async (id: number | string, updatedFields: Partial<Payment>) => {
@@ -1543,6 +1572,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     const updated = await api.patch<Payment>(`/payments/${id}/`, payload, token || undefined);
     const enriched = enrichPaymentWithOrderDetails(updated, orders, users);
     setPayments((prev) => prev.map((p) => (p.id === id ? enriched : p)));
+    console.log("updatedFields.status", updatedFields.status);
+    if (updatedFields.status === "failed") {
+      console.log("hereinfailed")
+      const response = await api.post<Notification>(`/notifications/`, { notification_type: "system", title: "Payment failed", message: `Payment failed for Order #${enriched.order_number_display} placed by ${enriched.user_email_display}. Total: $${enriched.amount}` }, token || undefined);
+      setNotifications((prev) => [response, ...prev]);
+    }
   };
 
   const deletePayment = async (id: number | string) => {
@@ -1569,6 +1604,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
 
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       //if (!token) return;
       const data = await api.getWithToken<ShippingMethod[]>("/shipping-methods/", token ?? "");
       setShippingMethods(data);
@@ -1662,6 +1699,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchShipments = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Shipment[]>("/shipments/", token || undefined);
       const enriched = data.map((item) =>
         enrichShipmentWithRelations(item, orders, shippingMethods, users)
@@ -1787,7 +1826,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchAddresses = useCallback(async () => {
     try {
       const token = await getAuthToken();
-
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Address[]>("/addresses/", token || undefined);
       const enriched = data.map((addr) => enrichAddressWithUserEmail(addr, users));
       setAddresses(enriched);
@@ -1932,6 +1972,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchSocials = useCallback(async () => {
     try {
       const token = await getAuthToken();
+      if (!token) return;
+      //if (!enabled) return;
       const data = await api.get<Social[]>("/socials/", token || undefined);
       setSocials(data);
     } catch (err: any) {
@@ -1963,7 +2005,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!socials.length) fetchSocials();   // empty array → fetch → new empty array → fetch...
   }, [socials, accessToken, fetchSocials]);
-  const unreadNotificationsCount = notifications.filter((n) => !n.is_read).length;
+  const unreadNotificationsCount = notifications.filter((n) => !n.is_read && n.notification_type == "system").length;
   const unreadMessagesCount = messages.filter((m) => m.unread).length;
 
   return (

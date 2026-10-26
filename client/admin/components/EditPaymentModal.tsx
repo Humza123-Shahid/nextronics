@@ -23,6 +23,7 @@ export default function EditPaymentModal() {
         setSelectedPaymentForEdit,
         orders,
         updatePayment,
+        users
     } = useAdmin();
 
     const [formData, setFormData] = useState<any>({
@@ -149,11 +150,14 @@ export default function EditPaymentModal() {
                             className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                         >
                             <option value="">Select Order</option>
-                            {orders.map((ord: any) => (
-                                <option key={ord.id} value={ord.id}>
-                                    {ord.order_number || `Order #${ord.id}`} ({ord.user_email || "Guest"})
-                                </option>
-                            ))}
+                            {orders.map((ord: any) => {
+                                const matchedUser = users.find((u) => String(u.id) === String(ord.user_id));
+                                return (
+                                    <option key={ord.id} value={ord.id}>
+                                        {ord.order_number || `Order #${ord.id}`} ({matchedUser?.email || "Guest"})
+                                    </option>
+                                )
+                            })}
                         </select>
                     </div>
 

@@ -11,6 +11,7 @@ export default function AddShipmentModal() {
         orders,
         shippingMethods,
         addShipment,
+        users
     } = useAdmin();
 
     const [formData, setFormData] = useState({
@@ -111,11 +112,14 @@ export default function AddShipmentModal() {
                                 className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                             >
                                 <option value="">Select Order</option>
-                                {orders.map((ord) => (
-                                    <option key={ord.id} value={ord.id}>
-                                        {ord.order_number} ({ord.user_email || "Guest"})
-                                    </option>
-                                ))}
+                                {orders.map((ord) => {
+                                    const user = users.find((u) => u.id === ord.user);
+                                    return (
+                                        <option key={ord.id} value={ord.id}>
+                                            {ord.order_number} ({user?.email || "Guest"})
+                                        </option>
+                                    )
+                                })}
                             </select>
                         </div>
 

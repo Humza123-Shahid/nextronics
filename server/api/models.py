@@ -194,7 +194,8 @@ class Payment(models.Model):
     STATUS_CHOICES = [('pending', 'Pending'), ('success', 'Success'), ('failed', 'Failed'), ('refunded', 'Refunded')]
  
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
-    payment_method = models.CharField(max_length=100, unique=True)  #"e.g. Credit Card, PayPal, Cash on Delivery, Stripe, Razorpay"
+    # payment_method = models.CharField(max_length=100, unique=True)  #"e.g. Credit Card, PayPal, Cash on Delivery, Stripe, Razorpay"
+    payment_method = models.CharField(max_length=100)
     transaction_id = models.CharField(max_length=255, unique=True, blank=True, null=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
+import NotificationsDropdown from "./NotificationsDropdown"; // Adjust path if component is placed elsewhere
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -380,6 +381,7 @@ export default function Header() {
 
             {/* RIGHT: Action Icons */}
             <div className="flex items-center gap-1 sm:gap-4 shrink-0">
+              <NotificationsDropdown />
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                 <Link
                   href="#wishlist"
@@ -907,6 +909,7 @@ export default function Header() {
                 {/* RIGHT */}
                 <div className="flex items-center gap-0.5 sm:gap-2 shrink-0" ref={compactSearchWrapRef}>
                   {/* Search icon hidden below sm breakpoint (removed at ~320px mobile widths) */}
+                  <NotificationsDropdown />
                   <motion.button
                     whileTap={{ scale: 0.9 }}
                     type="button"

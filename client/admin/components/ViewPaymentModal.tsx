@@ -22,7 +22,8 @@ export default function ViewPaymentModal() {
 
     const matchedOrder = orders.find((o) => String(o.id) === String(orderId));
     const orderNumberDisplay = matchedOrder?.order_number || payment.order_number_display || `Order #${orderId}`;
-    const userEmailDisplay = matchedOrder?.user_email || payment.user_email_display || "Guest / N/A";
+    // const userEmailDisplay = matchedOrder?.user_email || payment.user_email_display || "Guest / N/A";
+    const userEmailDisplay = payment.user_email_display || "Guest / N/A";
 
     const statusBadge =
         payment.status === "success"

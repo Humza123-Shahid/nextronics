@@ -47,6 +47,7 @@ export default function Header() {
     setIsAddProductModalOpen,
     products,
     orders,
+
   } = useAdmin();
 
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -58,7 +59,16 @@ export default function Header() {
   const msgRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [parsed, setParsed] = useState<{ first_name?: string; last_name?: string } | null>(null);
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("nextronics_auth_user");
+      if (stored) setParsed(JSON.parse(stored));
+    } catch (err) {
+      console.error("Failed to read auth user from localStorage", err);
+    }
+  }, []);
   // Close popovers on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -407,7 +417,9 @@ export default function Header() {
               className="h-10 w-10 rounded-full object-cover ring-2 ring-blue-500/50"
             />
             <div className="hidden text-left xl:block">
-              <span className="block text-sm font-medium text-white">Alex Morgan</span>
+              {/* <span className="block text-sm font-medium text-white">Alex Morgan</span>
+              <span className="block text-xs text-[#8A99AD]">Super Admin</span> */}
+              <span className="block text-sm font-medium text-white">{parsed?.first_name || ""} {" "} {parsed?.last_name || ""}</span>
               <span className="block text-xs text-[#8A99AD]">Super Admin</span>
             </div>
             <ChevronDown className="hidden h-4 w-4 text-[#8A99AD] xl:block" />
@@ -416,7 +428,7 @@ export default function Header() {
           {userDropdownOpen && (
             <div className="absolute right-0 mt-3 w-56 rounded-xl border border-[#2E3A47] bg-[#1C2434] p-2 shadow-2xl z-50">
               <div className="border-b border-[#2E3A47] px-3 py-2 xl:hidden">
-                <p className="text-sm font-semibold text-white">Alex Morgan</p>
+                <p className="text-sm font-semibold text-white">{parsed?.first_name || ""} {" "} {parsed?.last_name || ""}</p>
                 <p className="text-xs text-[#8A99AD]">Super Admin</p>
               </div>
 

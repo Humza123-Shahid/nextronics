@@ -1,9 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { setAuthCookie, deleteAuthCookie } from "@/app/actions/auth";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { setAuthCookie, deleteAuthCookie, getAuthCookie } from "@/app/actions/auth";
 import { api } from "@/admin/services/api";
 import { Notification } from "@/admin/types";
+import { useRouter } from "next/navigation";
 // import { useAdmin } from "@/admin/context/AdminContext";
 
 export interface AuthUser {
@@ -52,6 +53,35 @@ interface AuthContextType {
   logout: () => void;
 }
 
+
+// const getCookie = (name: string) =>
+//   document.cookie.split("; ").find((c) => c.startsWith(name + "="))?.split("=")[1];
+
+// // Decode JWT exp (ms). Only works if the token is readable (not HttpOnly).
+// function getExpiry(): number | null {
+//   const token = getCookie("access_token");
+//   if (!token) return null;
+//   try {
+//     const payload = JSON.parse(atob(token.split(".")[1]));
+//     return payload.exp * 1000;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// Decode JWT exp (ms). Only works if the token is readable (not HttpOnly).
+async function getExpiry(): Promise<number | null> {
+  const token = await getAuthCookie();
+  console.log(token);
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(String(token).split(".")[1]));
+    return payload.exp * 1000;
+  } catch {
+    return null;
+  }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = "nextronics_auth_user";
@@ -60,6 +90,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL
   : "http://127.0.0.1:8080/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // const {
@@ -105,9 +137,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.success && data.user) {
-        setUser(data.user);
+        //setUser(data.user);
         const tokens = data.tokens;
         console.log(data.user);
+        console.log(tokens);
         // 3. Replace cookieStore.set with your Server Action
         await setAuthCookie(tokens.access);
         try {
@@ -118,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (storageErr) {
           console.warn("Could not save to localStorage:", storageErr);
         }
+        setUser(data.user); // last, so the effect sees a valid cookie
         return {
           success: true,
           user: data.user,
@@ -157,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.success && data.user) {
-        setUser(data.user);
+        //setUser(data.user);
         const tokens = data.tokens;
 
         // 3. Replace cookieStore.set with your Server Action
@@ -177,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // const response = await api.post<Notification>(`/notifications/`, { notification_type: "system", title: "New Customer Registration", message: `${payload.first_name} ${payload.last_name} (${payload.email}) just created an account.` }, tokens.access || undefined);
         // //setNotifications((prev) => [response, ...prev]);
         // setNotifications([response, ...notifications]);
-
+        setUser(data.user); // last, so the effect sees a valid cookie
         return {
           success: true,
           user: data.user,
@@ -197,16 +231,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    try {
+  // const logout = () => {
+  //   setUser(null);
+  //   try {
+  //     localStorage.removeItem(AUTH_STORAGE_KEY);
+  //     localStorage.removeItem("nextronics_access_token");
+  //     deleteAuthCookie();
+  //   } catch (err) {
+  //     console.error("Error removing auth from storage:", err);
+  //   }
+  // };
+  const logout = useCallback(
+    (reason?: string) => {
+      //localStorage.removeItem("user");
+      localStorage.setItem("logout-event", Date.now().toString()); // notify other tabs
+      setUser(null);
       localStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem("nextronics_access_token");
       deleteAuthCookie();
-    } catch (err) {
-      console.error("Error removing auth from storage:", err);
-    }
-  };
+      // router.replace(`/login${reason ? `?reason=${reason}` : ""}`);
+      router.replace(`/signin${reason ? `?reason=${reason}` : ""}`);
+
+    },
+    [router]
+  );
+
+
+
+
+  // expiry effect: async-aware
+  useEffect(() => {
+    if (!user) return;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    // (b) Detect manual cookie deletion: poll every 5s
+    const check = async () => {
+      const exp = await getExpiry();
+      if (cancelled) return;
+      if (!exp || exp <= Date.now()) logout("expired");
+    };
+    // (a) Timer that fires exactly at expiry
+    (async () => {
+      const exp = await getExpiry();
+      if (cancelled) return;
+      if (!exp) return logout("expired");
+      const delay = Math.min(Math.max(exp - Date.now(), 0), 2_147_000_000);
+      timer = setTimeout(() => logout("expired"), delay);
+    })();
+
+    const poll = setInterval(check, 5000);
+    // (c) Re-check when the user returns to the tab (timers are throttled in background tabs)
+    const onVisible = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    // (d) Logout in other tabs
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "logout-event") {
+        setUser(null);
+        router.replace("/signin");
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [user, logout, router]);
 
   return (
     <AuthContext.Provider

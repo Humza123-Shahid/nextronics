@@ -60,7 +60,7 @@ const NAV_ITEMS = [
   // { name: "Computer & Laptop", href: "#computer-laptop" },
   { name: "New Arrival", href: "#new-arrival", badge: "NEW" },
   { name: "Contact Us", href: "/contact" },
-  { name: "Dashboard", href: "/admin" },
+  // { name: "Dashboard", href: "/admin" },
 ];
 
 export default function Header() {

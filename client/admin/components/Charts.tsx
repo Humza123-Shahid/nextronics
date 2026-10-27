@@ -474,13 +474,32 @@ export function VisitorsDeviceChart() {
       color: COLOR_MAP[deviceName] || "#CBD5E1",
     };
   });
+  const desktop = devices.filter((d) => d.name == "Desktop")[0];
+  const mobile = devices.filter((d) => d.name == "Mobile")[0];
+  const tablet = devices.filter((d) => d.name == "Tablet")[0];
 
   // const devices = [
   //   { name: "Desktop", share: 58, color: "#3C50E0" },
   //   { name: "Mobile", share: 34, color: "#06B6D4" },
   //   { name: "Tablet", share: 8, color: "#10B981" },
   // ];
+  // const RADIUS = 38;
+  // const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // ≈ 238.76
 
+  // // put this above the return, after `devices` is built
+  // let cumulative = 0;
+  // const segments = Object.keys(deviceCounts).map((name) => {
+  //   const fraction = totalViews > 0 ? deviceCounts[name] / totalViews : 0;
+  //   const length = fraction * CIRCUMFERENCE;
+  //   const seg = {
+  //     name,
+  //     color: COLOR_MAP[name] || "#CBD5E1",
+  //     length,
+  //     offset: cumulative,
+  //   };
+  //   cumulative += length;
+  //   return seg;
+  // });
   return (
     <div className="rounded-xl border border-[#2E3A47] bg-[#24303F] p-5 sm:p-7.5 shadow-md flex flex-col justify-between">
       <div>
@@ -495,7 +514,7 @@ export function VisitorsDeviceChart() {
         {/* Circular Donut Diagram */}
         <div className="relative my-6 flex items-center justify-center">
           <svg className="h-44 w-44 -rotate-90 transform" viewBox="0 0 100 100">
-            {/* Background ring */}
+
             <circle
               cx="50"
               cy="50"
@@ -504,7 +523,7 @@ export function VisitorsDeviceChart() {
               stroke="#1C2434"
               strokeWidth="12"
             />
-            {/* Desktop Segment: 58% */}
+
             <circle
               cx="50"
               cy="50"
@@ -512,11 +531,11 @@ export function VisitorsDeviceChart() {
               fill="transparent"
               stroke="#3C50E0"
               strokeWidth="12"
-              strokeDasharray={`${58 * 2.387} ${100 * 2.387}`}
+              strokeDasharray={`${desktop?.share * 2.387} ${100 * 2.387}`}
               strokeDashoffset="0"
-              strokeLinecap="round"
+              strokeLinecap="butt"
             />
-            {/* Mobile Segment: 34% */}
+
             <circle
               cx="50"
               cy="50"
@@ -524,11 +543,11 @@ export function VisitorsDeviceChart() {
               fill="transparent"
               stroke="#06B6D4"
               strokeWidth="12"
-              strokeDasharray={`${34 * 2.387} ${100 * 2.387}`}
-              strokeDashoffset={`-${58 * 2.387}`}
-              strokeLinecap="round"
+              strokeDasharray={`${mobile?.share * 2.387} ${100 * 2.387}`}
+              strokeDashoffset={`-${desktop?.share * 2.387}`}
+              strokeLinecap="butt"
             />
-            {/* Tablet Segment: 8% */}
+
             <circle
               cx="50"
               cy="50"
@@ -536,9 +555,9 @@ export function VisitorsDeviceChart() {
               fill="transparent"
               stroke="#10B981"
               strokeWidth="12"
-              strokeDasharray={`${8 * 2.387} ${100 * 2.387}`}
-              strokeDashoffset={`-${(58 + 34) * 2.387}`}
-              strokeLinecap="round"
+              strokeDasharray={`${tablet?.share * 2.387} ${100 * 2.387}`}
+              strokeDashoffset={`-${(desktop?.share + mobile?.share) * 2.387}`}
+              strokeLinecap="butt"
             />
           </svg>
 

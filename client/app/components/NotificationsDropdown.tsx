@@ -81,13 +81,45 @@ export default function NotificationsDropdown() {
     }, []);
 
     const markAsRead = async (id: string) => {
-        setNotifications((prev) =>
-            prev.map((n) => (String(n.id) === id ? { ...n, read: true } : n))
-        );
+        // setNotifications((prev) =>
+        //     prev.map((n) => (String(n.id) === id ? { ...n, is_read: true } : n))
+        // );
+        await api.patch<Notification>(`/notifications/${id}/`, { is_read: true });
+        setNotifications((prev) => prev.map((n) => (String(n.id) === id ? { ...n, is_read: true } : n)));
     };
 
-    const markAllAsRead = () => {
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const markAllAsRead = async () => {
+        // setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        const unread = notifications.filter((n) => !n.is_read);
+        if (!unread.length) return;
+
+        // optimistic update
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+
+        try {
+
+
+            // wait for ALL requests to finish
+            const results = await Promise.allSettled(
+                unread.map((n) =>
+                    api.patch<Notification>(`/notifications/${n.id}/`, { is_read: true })
+                )
+            );
+
+            // roll back only the ones that failed
+            const failedIds = unread
+                .filter((_, i) => results[i].status === "rejected")
+                .map((n) => n.id);
+
+            if (failedIds.length) {
+                console.error("Failed to mark some notifications as read:", failedIds);
+                setNotifications((prev) =>
+                    prev.map((n) => (failedIds.includes(n.id) ? { ...n, is_read: false } : n))
+                );
+            }
+        } catch (err: any) {
+            console.error("Failed to mark all notifications as read:", err);
+        }
     };
 
     return (

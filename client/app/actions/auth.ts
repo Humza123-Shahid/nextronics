@@ -11,6 +11,7 @@ export async function setAuthCookie(token: string) {
         sameSite: 'strict',
         // maxAge: 60 * 60 * 24 * 7, // 7 days
         expires: new Date(Date.now() + 60 * 60 * 23 * 1000), // 1 day from now as a Date object
+        //expires: new Date(Date.now() + 10 * 1000),
         path: '/',
     });
 }

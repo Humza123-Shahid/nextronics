@@ -1,7 +1,9 @@
 import re
-from django.db.models import Q
+from django.db.models import Q, F
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdminUserCustom
+from .permissions import IsAdminUserStrict
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
@@ -74,6 +76,24 @@ class ProductViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, IsAdminUserCustom]
         
         return [permission() for permission in permission_classes]
+
+
+class SpecialHighlightsView(ListAPIView):
+    serializer_class = ProductSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        limit = min(int(self.request.query_params.get('limit', 8)), 24)
+        return (
+            Product.objects
+            .filter(
+                status='active', is_active=True,
+                compare_at_price__gt=F('price'),
+                rating__gte=4.0,
+            )
+            .select_related('category')
+            .order_by('-sales_count')[:limit]
+        )
 
 class ProductVariantViewSet(viewsets.ModelViewSet):
     queryset = ProductVariant.objects.all()
@@ -361,3 +381,9 @@ def signup_view(request):
         'isAdmin': False,
     }, status=status.HTTP_201_CREATED)
 
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUserStrict])
+def admin_check(request):
+    return Response({'isAdmin': True, 'username': request.user.username})

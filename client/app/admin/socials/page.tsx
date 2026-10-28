@@ -1,5 +1,6 @@
 import SocialsView from "@/admin/views/SocialsView";
+import AdminLayout from "@/admin/views/AdminRoute";
 
 export default function AdminSocialsPage() {
-    return <SocialsView />;
+    return <AdminLayout><SocialsView /></AdminLayout>;
 }

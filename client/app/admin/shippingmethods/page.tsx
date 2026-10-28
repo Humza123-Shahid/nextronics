@@ -1,5 +1,6 @@
 import ShippingMethodsView from "@/admin/views/ShippingMethodsView";
+import AdminLayout from "@/admin/views/AdminRoute";
 
 export default function AdminShippingMethodsPage() {
-    return <ShippingMethodsView />;
+    return <AdminLayout><ShippingMethodsView /></AdminLayout>;
 }

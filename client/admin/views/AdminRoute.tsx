@@ -13,13 +13,13 @@ export default async function AdminLayout({
 }) {
     // const token = (await cookies()).get("access")?.value;
     const token = await getAuthCookie();
-    if (!token) redirect("/admin/login");
+    if (!token) redirect("/signin");
 
     const res = await fetch(`${API}/api/admin/check/`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
     });
-    if (!res.ok) redirect("/admin/login");
+    if (!res.ok) redirect("/signin");
 
     return <>{children}</>;
 }

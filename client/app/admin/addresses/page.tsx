@@ -1,5 +1,7 @@
 import AddressesView from "@/admin/views/AddressesView";
+import AdminLayout from "@/admin/views/AdminRoute";
+
 
 export default function AdminAddressesPage() {
-    return <AddressesView />;
+    return <AdminLayout><AddressesView /></AdminLayout>;
 }

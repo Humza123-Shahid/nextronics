@@ -5,7 +5,7 @@ from .views import (
     ProductVariantViewSet, AttributeValueViewSet, InventoryViewSet, WarehouseViewSet,
     CartViewSet, CartItemViewSet, OrderViewSet, OrderItemViewSet, PaymentViewSet,
     ShippingMethodViewSet, ShipmentViewSet, NotificationViewSet, TestimonialViewSet,
-    SocialViewSet, PageVisitViewSet, login_view, signup_view
+    SocialViewSet, PageVisitViewSet, login_view, signup_view,admin_check,SpecialHighlightsView
 )
 
 router = DefaultRouter()
@@ -33,5 +33,7 @@ router.register(r'page-visits', PageVisitViewSet)
 urlpatterns = [
     path('auth/login/', login_view, name='auth-login'),
     path('auth/signup/', signup_view, name='auth-signup'),
+    path('admin/check/', admin_check),
+    path('products/special-highlights/', SpecialHighlightsView.as_view()),
     path('', include(router.urls)),
-]
+]

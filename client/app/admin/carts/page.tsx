@@ -1,5 +1,6 @@
 import CartsView from "@/admin/views/CartsView";
+import AdminLayout from "@/admin/views/AdminRoute";
 
 export default function AdminCartsPage() {
-    return <CartsView />;
+    return <AdminLayout><CartsView /></AdminLayout>;
 }

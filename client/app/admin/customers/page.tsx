@@ -1,5 +1,6 @@
 import CustomersView from "@/admin/views/CustomersView";
+import AdminLayout from "@/admin/views/AdminRoute";
 
 export default function AdminCustomersPage() {
-  return <CustomersView />;
+  return <AdminLayout><CustomersView /></AdminLayout>;
 }

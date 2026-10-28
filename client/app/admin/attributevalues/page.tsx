@@ -1,5 +1,6 @@
 import AttributeValuesView from "@/admin/views/AttributeValuesView";
+import AdminLayout from "@/admin/views/AdminRoute";
 
 export default function AdminAttributeValuesPage() {
-    return <AttributeValuesView />;
+    return <AdminLayout><AttributeValuesView /></AdminLayout>;
 }

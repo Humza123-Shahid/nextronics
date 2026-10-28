@@ -243,13 +243,15 @@ const starVariants: Variants = {
 export default function VerticalProductSlider({
   onAddToCart,
   autoPlayInterval = 5000,
-}: VerticalProductSliderProps) {
+  slides,
+}: { onAddToCart?: (productName: string) => void, autoPlayInterval?: number, slides: VerticalProductItem[][] }) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  console.log(slides)
   const [direction, setDirection] = useState(1);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
-  const totalSlides = PRODUCT_SLIDES.length;
-
+  //const totalSlides = PRODUCT_SLIDES.length;
+  const totalSlides = slides.length;
   // Keep the latest slide index in a ref so the interval callback
   // always advances from the current slide without needing to be
   // re-created (and reset) every time currentSlideIndex changes.
@@ -305,7 +307,8 @@ export default function VerticalProductSlider({
     }, 1200);
   };
 
-  const activeProducts = PRODUCT_SLIDES[currentSlideIndex];
+  //const activeProducts = PRODUCT_SLIDES[currentSlideIndex];
+  const activeProducts = slides[currentSlideIndex];
 
   return (
     <div
@@ -384,7 +387,7 @@ export default function VerticalProductSlider({
             exit="exit"
             className="flex flex-col justify-between h-full gap-2.5 sm:gap-3"
           >
-            {activeProducts.map((product) => {
+            {activeProducts?.map((product) => {
               const justAdded = addedId === product.id;
               return (
                 <motion.div
@@ -445,8 +448,8 @@ export default function VerticalProductSlider({
                             >
                               <Star
                                 className={`w-3 h-3 ${isFilled
-                                    ? "fill-amber-400 text-amber-400"
-                                    : "fill-transparent text-slate-600"
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "fill-transparent text-slate-600"
                                   }`}
                               />
                             </motion.span>
@@ -480,8 +483,8 @@ export default function VerticalProductSlider({
                     animate={justAdded ? { scale: [1, 1.15, 1] } : { scale: 1 }}
                     transition={{ duration: 0.35 }}
                     className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors border shrink-0 self-center shadow ${justAdded
-                        ? "bg-emerald-600 border-emerald-500 text-white"
-                        : "bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white border-slate-700/60 hover:border-blue-500"
+                      ? "bg-emerald-600 border-emerald-500 text-white"
+                      : "bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white border-slate-700/60 hover:border-blue-500"
                       }`}
                   >
                     <AnimatePresence mode="wait" initial={false}>
@@ -525,7 +528,8 @@ export default function VerticalProductSlider({
         </span>
 
         <div className="flex items-center gap-1.5">
-          {PRODUCT_SLIDES.map((_, idx) => {
+          {/* {PRODUCT_SLIDES.map((_, idx) => { */}
+          {slides.map((_, idx) => {
             const isActive = idx === currentSlideIndex;
             return (
               <motion.button

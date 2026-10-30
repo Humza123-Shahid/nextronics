@@ -12,7 +12,18 @@ export interface Product {
   name: string;
   image: string;
   href: string;
+  description?: string;
+  short_description?: string;
+  meta_title?: string;
+  meta_description?: string;
+  stock_quantity?: number;
+  category?: string;
+  sku?: string;
+  brand?: string;
   price: number;
+  weight_kg?: number;
+  dimensions?: { [key: string]: number };
+  attributes?: { [key: string]: string };
   compare_at_price: number | null;
   discountPercent: number;
   rating: number;
@@ -20,7 +31,22 @@ export interface Product {
   sales_count: number;      // NEW – units sold (used for "Popular")
   createdAt: string;  // NEW – ISO date (used for "Newly Added")
 }
-
+export interface Category {
+  id: number | string;
+  name: string;
+  slug: string;
+  parent_id: string | number;
+  description: string;
+  image: string;
+  is_active: boolean;
+}
+export interface Brand {
+  id: number | string;
+  name: string;
+  slug?: string;
+  logo?: string | File | null;
+  description?: string;
+}
 export interface BestSellingTab {
   id: string;
   label: string;

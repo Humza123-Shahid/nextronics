@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState, useEffect, useMemo, type MouseEvent } from "react";
+
+import { useRouter } from 'next/navigation';
 import { Space_Grotesk, Inter } from "next/font/google";
 import { ShoppingCart, Heart, Eye, ArrowLeftRight, Star, Check } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, useReducedMotion } from "framer-motion";
@@ -196,7 +198,7 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
     // Add a ref to target the image element
     const imgRef = useRef<HTMLImageElement>(null);
     const addTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+    const router = useRouter();
     // Check if image is already cached on mount/update
     useEffect(() => {
         if (imgRef.current && imgRef.current.complete) {
@@ -209,11 +211,16 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
         if (addTimeout.current) clearTimeout(addTimeout.current);
         addTimeout.current = setTimeout(() => setIsAdded(false), 1600);
     }
-
+    const handleClick = () => {
+        localStorage.setItem("productID", String(product.id))
+        // Perform any custom logic here
+        router.push('/products');
+    };
     return (
         <motion.article
             custom={index}
             variants={buildCardVariants(reduceMotion)}
+            //href={"/products"} 
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-60px" }}
@@ -271,9 +278,11 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
                             <Heart size={16} fill={isLiked ? "var(--sale)" : "none"} stroke={isLiked ? "var(--sale)" : "currentColor"} />
                         </motion.span>
                     </motion.button>
-                    <motion.button variants={iconBtnVariants} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} type="button" aria-label={`Quick view ${product.name}`} className={styles.iconBtn}>
+
+                    <motion.button variants={iconBtnVariants} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} type="button" onClick={handleClick} aria-label={`Quick view ${product.name}`} className={styles.iconBtn}>
                         <Eye size={16} />
                     </motion.button>
+
                     <motion.button variants={iconBtnVariants} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} type="button" aria-label={`Compare ${product.name}`} className={styles.iconBtn}>
                         <ArrowLeftRight size={16} />
                     </motion.button>

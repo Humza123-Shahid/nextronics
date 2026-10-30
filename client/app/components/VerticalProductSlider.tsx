@@ -306,7 +306,10 @@ export default function VerticalProductSlider({
       setAddedId((current) => (current === product.id ? null : current));
     }, 1200);
   };
-
+  const handleProductClick = (productId: string) => {
+    // Save the clicked product ID to localStorage
+    localStorage.setItem("productID", productId);
+  };
   //const activeProducts = PRODUCT_SLIDES[currentSlideIndex];
   const activeProducts = slides[currentSlideIndex];
 
@@ -388,13 +391,22 @@ export default function VerticalProductSlider({
             className="flex flex-col justify-between h-full gap-2.5 sm:gap-3"
           >
             {activeProducts?.map((product) => {
+              //localStorage.setItem("productID", String(product.id))
               const justAdded = addedId === product.id;
               return (
-                <motion.div
+                // <motion.div
+                <motion.a
                   key={product.id}
+                  href={"/products"}
+                  onMouseDown={() => {
+                    // Fires immediately when any mouse button (left, right, or middle) is pressed down
+                    localStorage.setItem("productID", product.id);
+                  }}
+                  //onClick={() => handleProductClick(product.id)}
                   variants={rowVariants}
                   whileHover={{ y: -2 }}
-                  className="group relative flex items-center gap-3.5 p-2 sm:p-2.5 rounded-xl border border-slate-800/60 bg-[#0d1424]/60 hover:bg-[#121c33] hover:border-blue-500/40 transition-colors duration-200"
+                  // className="group relative flex items-center gap-3.5 p-2 sm:p-2.5 rounded-xl border border-slate-800/60 bg-[#0d1424]/60 hover:bg-[#121c33] hover:border-blue-500/40 transition-colors duration-200"
+                  className="group relative flex items-center gap-3.5 p-2 sm:p-2.5 rounded-xl border border-slate-800/60 bg-[#0d1424]/60 hover:bg-[#121c33] hover:border-blue-500/40 transition-colors duration-200 cursor-pointer"
                 >
                   {/* Product Thumbnail Container */}
                   <div className="relative w-16 h-16 sm:w-[72px] sm:h-[72px] shrink-0 rounded-lg bg-slate-900/90 border border-slate-800 p-1 flex items-center justify-center overflow-hidden">
@@ -425,13 +437,20 @@ export default function VerticalProductSlider({
                   {/* Product Info */}
                   <div className="flex-1 min-w-0 pr-1">
                     {/* Title */}
-                    <Link
+                    {/* <Link
                       href={`#product-${product.id}`}
                       className="block text-xs sm:text-[13px] font-bold text-slate-200 group-hover:text-cyan-400 truncate transition-colors"
                       title={product.name}
                     >
                       {product.name}
-                    </Link>
+                    </Link> */}
+                    <div
+                      // href={`#product-${product.id}`}
+                      className="block text-xs sm:text-[13px] font-bold text-slate-200 group-hover:text-cyan-400 truncate transition-colors"
+                      title={product.name}
+                    >
+                      {product.name}
+                    </div>
 
                     {/* Rating Stars — sequential fill-in */}
                     <div className="flex items-center gap-1.5 mt-1">
@@ -513,7 +532,7 @@ export default function VerticalProductSlider({
                       )}
                     </AnimatePresence>
                   </motion.button>
-                </motion.div>
+                </motion.a>
               );
             })}
           </motion.div>

@@ -1,7 +1,7 @@
 import ShopHeader from "./ShopHeader";
 import PageTitleBanner from "./PageTitleBanner";
 import ShopSection from "./ShopSection";
-import Footer from "./Footer";
+import Footer from "../components/Footer";
 import { Suspense } from "react";
 
 export const metadata = {
@@ -18,6 +18,7 @@ export default function ShopPage() {
                     <ShopSection />
                 </Suspense>
             </main>
+            <Footer />
 
         </>
     );

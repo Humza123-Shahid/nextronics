@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+    motion,
+    useMotionValue,
+    useSpring,
+    useTransform,
+    useInView,
+    Variants,
+} from "framer-motion";
 import {
     Search,
     Heart,
@@ -21,6 +29,7 @@ interface Category {
 interface Product {
     id: number;
     name: string;
+    slug: string;
     category: number;
     price: number;
     compare_at_price?: number;
@@ -56,14 +65,44 @@ export default function ShopSection() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const shopRef = useRef<HTMLAnchorElement>(null);
+    const mouseX = useMotionValue(0);
+    const mouseY = useMotionValue(0);
+
+    const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), {
+        stiffness: 300,
+        damping: 25,
+    });
+    const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8, 8]), {
+        stiffness: 300,
+        damping: 25,
+    });
+
+    // Shine sweep follows cursor horizontally
+    const shineX = useTransform(mouseX, [-0.5, 0.5], ["0%", "100%"]);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        const rect = shopRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        mouseX.set(x);
+        mouseY.set(y);
+    };
+
+    const handleMouseLeave = () => {
+        mouseX.set(0);
+        mouseY.set(0);
+    };
+
     // 2. Fetch both endpoints simultaneously using Promise.all
     useEffect(() => {
         async function fetchData() {
             try {
                 setIsLoading(true);
                 const [productsRes, categoriesRes] = await Promise.all([
-                    fetch("http://127.0.0.1:8080/api/products"),
-                    fetch("http://127.0.0.1:8080/api/categories") // Your category table API
+                    fetch("http://127.0.0.1:8080/api/products/"),
+                    fetch("http://127.0.0.1:8080/api/categories/") // Your category table API
                 ]);
 
                 if (!productsRes.ok || !categoriesRes.ok) {
@@ -138,7 +177,10 @@ export default function ShopSection() {
     // 5. Add loading and error layout state checks
     if (isLoading) return <div className="text-center py-20 font-semibold">Loading products...</div>;
     if (error) return <div className="text-center py-20 text-red-500 font-semibold">Error: {error}</div>;
-
+    const handleProductClick = (productId: string) => {
+        // Save the clicked product ID to localStorage
+        localStorage.setItem("productID", productId);
+    };
     return (
         <section className="bg-slate-50 dark:bg-[#090d18] text-slate-900 dark:text-slate-100 py-10 sm:py-14">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[250px_1fr] gap-8">
@@ -249,11 +291,27 @@ export default function ShopSection() {
                                 // const Icon = p.icon;
                                 const wished = wishlist.includes(p.id);
                                 const productCategoryName = categoryMap.get(p.category) || "Uncategorized";
+                                //localStorage.setItem("productID", String(p.id))
                                 return (
-                                    <li
+                                    // <li
+                                    //     key={p.id}
+                                    //     className="group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c101d] overflow-hidden flex flex-col"
+                                    // >
+                                    // <motion.li
+                                    <motion.a
                                         key={p.id}
-                                        className="group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c101d] overflow-hidden flex flex-col"
+                                        // href={`/products/${String(p.id)}`}
+                                        href={"/products"}
+                                        onMouseDown={() => {
+                                            // Fires immediately when any mouse button (left, right, or middle) is pressed down
+                                            localStorage.setItem("productID", String(p.id));
+                                        }}
+                                        //onClick={() => handleProductClick(String(p.id))}
+                                        whileHover={{ scale: 1.03, y: -4 }}
+                                        transition={{ duration: 0.3, ease: "easeOut" }}
+                                        className="group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c101d] overflow-hidden flex flex-col cursor-pointer hover:shadow-lg dark:hover:shadow-cyan-950/30 transition-shadow"
                                     >
+
                                         <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
                                             <img
                                                 src={p.image}
@@ -326,7 +384,8 @@ export default function ShopSection() {
                                                 </button>
                                             </div>
                                         </div>
-                                    </li>
+                                        {/* </li> */}
+                                    </motion.a>
                                 );
                             })}
                         </ul>

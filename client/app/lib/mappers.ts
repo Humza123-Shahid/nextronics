@@ -24,7 +24,8 @@ export function toVerticalProductItem(p: ProductCard): VerticalProductItem {
     const onSale = compareAt !== null && compareAt > price;
 
     return {
-        id: p.slug,                                 // or String(p.id)
+        // id: p.slug,                                 // or String(p.id)
+        id: String(p.id),
         name: p.name,
         category: p.category ?? 'Uncategorized',
         image: p.image ?? PLACEHOLDER_IMAGE,

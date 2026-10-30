@@ -16,7 +16,8 @@
 }
 
 body {
-  background-color: #090d16;
+  /* background-color: #090d16; */
+  background-color: white;
   color: #f8fafc;
   font-family: var(--font-sans);
   overflow-x: hidden;

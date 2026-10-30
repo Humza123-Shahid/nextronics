@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type SVGProps } from "react";
+import { useRouter } from 'next/navigation';
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./BestSellingProducts.module.css";
@@ -171,14 +172,25 @@ interface ProductCardProps {
 }
 
 function ProductCard({
+
   product,
   index,
   isWishlisted,
   onAddToCart,
+  // onQuickView = (product) =>{
+  //   localStorage.setItem("productID", String(product.id))
+  //   router.push('/products');
+  // } ,
   onQuickView,
   onCompare,
   onToggleWishlist,
 }: ProductCardProps) {
+  const router = useRouter();
+  const handleClick = () => {
+    localStorage.setItem("productID", String(product.id))
+    // Perform any custom logic here
+    router.push('/products');
+  };
   return (
     <motion.article
       className={styles.card}
@@ -219,7 +231,8 @@ function ProductCard({
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={() => onQuickView(product)}
+              onClick={handleClick}
+              //onClick={() => onQuickView(product)}
               aria-label={`Quick view ${product.name}`}
               title="Quick View"
             >

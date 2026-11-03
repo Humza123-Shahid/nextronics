@@ -2,6 +2,7 @@ import ContactHeader from "./ContactHeader";
 import PageTitleBanner from "./PageTitleBanner";
 import ContactSection from "./ContactSection";
 import { Suspense } from "react";
+import Footer from "../components/Footer";
 
 export const metadata = {
     title: "Contact | Nextronics",
@@ -17,7 +18,7 @@ export default function ShopPage() {
                     <ContactSection />
                 </Suspense>
             </main>
-
+            <Footer />
         </>
     );
 }

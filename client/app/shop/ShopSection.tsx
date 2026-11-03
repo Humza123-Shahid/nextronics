@@ -25,7 +25,14 @@ interface Category {
     id: number;
     name: string;
 }
-
+interface ProductVariant {
+    id: number;
+    sku: string;
+    price_override?: number;
+    stock_quantity: number;
+    image?: string;
+    is_active: boolean;
+}
 interface Product {
     id: number;
     name: string;
@@ -35,6 +42,7 @@ interface Product {
     compare_at_price?: number;
     rating: number;
     image: string;
+    variants: ProductVariant[]; // Added variants list
     tag?: "SALE" | "NEW";
 }
 // const PRODUCTS: Product[] = [
@@ -180,6 +188,40 @@ export default function ShopSection() {
     const handleProductClick = (productId: string) => {
         // Save the clicked product ID to localStorage
         localStorage.setItem("productID", productId);
+    };
+    const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
+        try {
+            const sessionKey = localStorage.getItem('cart_session_key') || '';
+
+            const response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_variant_id: productVariantId,
+                    quantity: quantity,
+                    session_key: sessionKey,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to add item to cart');
+            }
+
+            // Save session key for guest users if returned by backend
+            if (data.session_key && !sessionKey) {
+                localStorage.setItem('cart_session_key', data.session_key);
+            }
+
+            console.log('Cart updated successfully:', data);
+            alert('Item added to cart successfully!');
+        } catch (error: any) {
+            console.error('Error adding to cart:', error.message);
+            alert(error.message || 'Something went wrong');
+        }
     };
     return (
         <section className="bg-slate-50 dark:bg-[#090d18] text-slate-900 dark:text-slate-100 py-10 sm:py-14">
@@ -378,6 +420,16 @@ export default function ShopSection() {
                                                 </div>
                                                 <button
                                                     type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();  // Prevents the <a> link from navigating
+                                                        e.stopPropagation(); // Prevents bubbling up to the parent card link
+
+                                                        // Grab the first active variant's ID, or fallback to product ID if no variants exist
+                                                        const defaultVariant = p.variants?.find(v => v.is_active) || p.variants?.[0];
+                                                        const productVariantId = defaultVariant ? defaultVariant.id : p.id;
+
+                                                        handleAddToCart(productVariantId, 1);
+                                                    }}
                                                     className="flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2"
                                                 >
                                                     <ShoppingCart className="w-3.5 h-3.5" /> Add to cart

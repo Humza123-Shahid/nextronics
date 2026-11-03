@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
+import { getAuthCookie } from "@/app/actions/auth";
 import NotificationsDropdown from "./NotificationsDropdown"; // Adjust path if component is placed elsewhere
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -34,7 +35,39 @@ interface CategoryItem {
   href: string;
   subItems?: SubMenuItem[];
 }
+export interface Product {
+  id: number;
+  name: string;
+  slug: string;
+  price: number; // Base price
+  image: string | null;
+}
 
+export interface ProductVariant {
+  id: number;
+  product: Product;
+  sku: string;
+  price_override: number | null;
+  stock_quantity: number;
+  image: string | null;
+  attribute_summary?: string; // e.g., "Red / XL"
+}
+
+export interface CartItem {
+  id: number;
+  cart: number; // Foreign Key ID pointing to Cart
+  product_variant: ProductVariant;
+  quantity: number;
+  added_at: string;
+}
+export interface Cart {
+  id: number;
+  user: number | null;
+  session_key: string | null;
+  items: CartItem[]; // Accessed via related_name='items' from CartItem
+  created_at: string;
+  updated_at: string;
+}
 const shopHref = (name: string) => `/shop?category=${encodeURIComponent(name)}`;
 
 const CATEGORIES: CategoryItem[] = [
@@ -108,7 +141,89 @@ export default function Header() {
     e.preventDefault();
     setTimeout(() => goToGadgets(tab), delay);
   };
+  const [cart, setCart] = useState<Cart | null>(null);
+  const fetchCart = async () => {
 
+    // const token = localStorage.getItem('token');
+    // const guestSessionKey = localStorage.getItem('guest_session_key');
+
+    // const headers: Record<string, string> = {
+    //   'Content-Type': 'application/json'
+    // };
+
+    // if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+    //   headers['Authorization'] = `Bearer ${token}`;
+    // } else if (guestSessionKey) {
+    //   headers['X-Guest-Session-Key'] = guestSessionKey;
+    // }
+    // // const response = await fetch('/api/cart/', {
+    // //     credentials: 'include', // Needed for session/cookie auth (guest or logged-in user)
+    // // });
+    // const response = await fetch('http://127.0.0.1:8080/api/carts/', {
+    //   method: 'GET',
+    //   // headers: {
+    //   //   'Authorization': `Bearer ${token}`,
+    //   //   'Content-Type': 'application/json'
+    //   // }
+    //   headers: headers
+    // });
+
+    // if (!response.ok) throw new Error('Failed to fetch cart.');
+    // // const data: Cart = await response.json();
+    // const data = await response.json();
+    // // setCart(data);
+    // // const userCart = Array.isArray(data) ? data[0] : data.results?.[0];
+    // const userCart = Array.isArray(data) ? data[0] : data;
+    // setCart(userCart || null);
+    if (typeof window !== 'undefined') {
+      const token = await getAuthCookie();
+      const guestSessionKey = localStorage.getItem('guest_session_key');
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      // Strictly check that the token is a valid, non-empty string
+      if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+        headers['X-Guest-Session-Key'] = guestSessionKey;
+      }
+
+      try {
+        const response = await fetch('http://127.0.0.1:8080/api/carts/', {
+          method: 'GET',
+          headers: headers
+        });
+
+        if (!response.ok) {
+          // Safely inspect the backend error details instead of crashing blindly
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Server error payload:', errorData);
+          throw new Error(`Failed to fetch cart. Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setCart(data);
+      } catch (error) {
+        console.error("Cart retrieval failed:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+  const items = cart?.items || [];
+  const subtotal = items.reduce((sum, item) => {
+    const variant = item.product_variant;
+    const effectivePrice = variant.price_override ?? variant.product.price;
+    return sum + Number(effectivePrice) * item.quantity;
+  }, 0);
+
+  // const shipping = subtotal > 100 || subtotal === 0 ? 0 : 15.0;
+  const shipping = subtotal > 0 ? 100 : 0;
+  const total = subtotal + shipping;
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -503,13 +618,15 @@ export default function Header() {
 
               <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Link
-                  href="#cart"
+                  // href="#cart"
+                  href="/cart"
                   className="flex items-center gap-2 sm:gap-2.5 bg-blue-600/10 dark:bg-blue-500/10 border border-blue-500/20 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-slate-900 dark:text-white hover:bg-blue-600 hover:text-white group"
                 >
                   <div className="relative">
                     <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-cyan-400 group-hover:text-white" />
                     <span className="absolute -top-1.5 -right-2 bg-blue-600 group-hover:bg-white group-hover:text-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow animate-badge-pop">
-                      3
+                      {/* 3 */}
+                      {items.reduce((acc, item) => acc + item.quantity, 0)}
                     </span>
                   </div>
                   <div className="hidden sm:flex flex-col text-left leading-tight">
@@ -517,7 +634,8 @@ export default function Header() {
                       Your Cart
                     </span>
                     <span className="text-xs font-bold text-blue-600 dark:text-cyan-400 group-hover:text-white">
-                      $349.00
+                      {/* $349.00 */}
+                      ${total.toFixed(2)}
                     </span>
                   </div>
                 </Link>

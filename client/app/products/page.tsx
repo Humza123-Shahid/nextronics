@@ -2,14 +2,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { notFound } from 'next/navigation';
+import { getAuthCookie } from "@/app/actions/auth";
 import Image from 'next/image';
 import Link from 'next/link';
 import ProductHeader from "./ProductHeader";
 import Footer from "../components/Footer";
 import { Metadata } from 'next';
-import { Star, ShoppingBag, CheckCircle, XCircle, Truck, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Star, ShoppingBag, CheckCircle, XCircle, Truck, ShieldCheck, ArrowRight, Minus, Plus } from 'lucide-react';
 // import { Product } from "@/admin/types";
-import { type Product, type Category, type Brand } from "../components/data";
+import { type ProductVariant, type Product, type Category, type Brand } from "../components/data";
+
+
+
 
 // Fetch single product data from Django API
 // async function getProduct(id: number): Promise<Product | null> {
@@ -80,6 +84,10 @@ export default function ProductDetailage() {
   const [brand, setBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);
 
+
+  // 1. Add the quantity state
+  const [quantity, setQuantity] = useState<number>(1);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -124,7 +132,9 @@ export default function ProductDetailage() {
 
     loadData();
   }, [router]);
-
+  useEffect(() => {
+    console.log(product)
+  }, [product]);
   if (loading) {
     return <div className="text-center py-20 text-gray-500">Loading product details...</div>;
   }
@@ -136,6 +146,71 @@ export default function ProductDetailage() {
   const compareAt = product.compare_at_price ? Number(product.compare_at_price) : null;
   const isInStock = product.stock_quantity! > 0;
 
+
+  // 2. Add handlers for changing quantity
+  const handleIncrement = () => {
+    if (product.stock_quantity && quantity < product.stock_quantity) {
+      setQuantity(prev => prev + 1);
+    }
+  };
+
+  const handleDecrement = () => {
+    if (quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
+  };
+  const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
+    try {
+      const sessionKey = localStorage.getItem('guest_session_key') || '';
+      const token = await getAuthCookie();
+      let response;
+      if (!token) {
+        response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            product_variant_id: productVariantId,
+            quantity: quantity,
+            session_key: sessionKey,
+          }),
+        });
+      }
+      else {
+        response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            product_variant_id: productVariantId,
+            quantity: quantity,
+            session_key: sessionKey,
+          }),
+        });
+      }
+
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add item to cart');
+      }
+
+      // Save session key for guest users if returned by backend
+      if (data.session_key && !sessionKey) {
+        localStorage.setItem('cart_session_key', data.session_key);
+      }
+
+      console.log('Cart updated successfully:', data);
+      alert('Item added to cart successfully!');
+    } catch (error: any) {
+      console.error('Error adding to cart:', error.message);
+      alert(error.message || 'Something went wrong');
+    }
+  }
   return (
     <>
       <ProductHeader />
@@ -246,11 +321,46 @@ export default function ProductDetailage() {
                 </>
               )}
             </div>
-
+            {isInStock && (
+              <div className="flex flex-col gap-2 pt-2">
+                <span className="text-sm font-semibold text-gray-700">Quantity</span>
+                <div className="flex items-center w-32 border border-gray-300 rounded-xl overflow-hidden bg-white h-12 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={handleDecrement}
+                    disabled={quantity <= 1}
+                    className="w-10 h-full flex items-center justify-center text-gray-500 hover:bg-gray-50 transition disabled:opacity-40"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="flex-1 text-center font-medium text-gray-900 select-none">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleIncrement}
+                    disabled={quantity >= (product.stock_quantity || 0)}
+                    className="w-10 h-full flex items-center justify-center text-gray-500 hover:bg-gray-50 transition disabled:opacity-40"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 disabled={!isInStock}
+                onClick={(e) => {
+                  e.preventDefault();  // Prevents the <a> link from navigating
+                  e.stopPropagation(); // Prevents bubbling up to the parent card link
+
+                  // Grab the first active variant's ID, or fallback to product ID if no variants exist
+                  const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+                  const productVariantId = defaultVariant ? defaultVariant.id : product.id;
+
+                  handleAddToCart(productVariantId, quantity);
+                }}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 shadow-sm"
               >
                 <ShoppingBag className="w-5 h-5" />
@@ -326,4 +436,5 @@ export default function ProductDetailage() {
       <Footer />
     </>
   );
+
 }

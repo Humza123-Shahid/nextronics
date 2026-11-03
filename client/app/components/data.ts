@@ -5,7 +5,14 @@
 // product photography/CDN, and update `remotePatterns` in next.config.js
 // to match. Everything else (name, price, rating, discount) is yours to
 // wire up to your API/CMS; the component only cares about the shape below.
-
+export interface ProductVariant {
+  id: number;
+  sku: string;
+  price_override?: number;
+  stock_quantity: number;
+  image?: string;
+  is_active: boolean;
+}
 export interface Product {
   id: number;
   slug: string;
@@ -24,6 +31,7 @@ export interface Product {
   weight_kg?: number;
   dimensions?: { [key: string]: number };
   attributes?: { [key: string]: string };
+  variants?: ProductVariant[];
   compare_at_price: number | null;
   discountPercent: number;
   rating: number;
@@ -96,6 +104,7 @@ function product({ id, slug, image, name, price, compare_at_price, rating, ratin
     price: numericPrice, // Return clean numeric types to the frontend
     compare_at_price: numericComparePrice > 0 ? numericComparePrice : null,
     discountPercent,
+
     rating,
     rating_count,
     sales_count,

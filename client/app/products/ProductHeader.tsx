@@ -101,7 +101,7 @@ function Logo() {
     );
 }
 
-export default function ShopHeader() {
+export default function ProductHeader() {
     const [mobileOpen, setMobileOpen] = useState(false);
 
     // Lock page scroll behind the mobile drawer; close it if the screen grows to desktop

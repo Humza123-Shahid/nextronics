@@ -1,11 +1,12 @@
 import re
 from django.db.models import Q, F
 from rest_framework.generics import ListAPIView
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdminUserCustom
 from .permissions import IsAdminUserStrict
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -13,7 +14,8 @@ from .models import User, Address, Category, Brand, Product, ProductVariant, Att
 from .serializers import UserSerializer, AddressSerializer, CategorySerializer, BrandSerializer, ProductSerializer, ProductVariantSerializer, AttributeValueSerializer, InventorySerializer, WarehouseSerializer, CartSerializer, CartItemSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer, ShippingMethodSerializer, ShipmentSerializer, NotificationSerializer, TestimonialSerializer, SocialSerializer,PageVisitSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from rest_framework.authentication import SessionAuthentication
+import uuid
 
 
 
@@ -49,6 +51,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, IsAdminUserCustom]
         
         return [permission() for permission in permission_classes]
+    
+    
 
 class BrandViewSet(viewsets.ModelViewSet):
     queryset = Brand.objects.all()
@@ -135,19 +139,227 @@ class WarehouseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
 
+# class CartViewSet(viewsets.ModelViewSet):
+#     queryset = Cart.objects.all()
+#     serializer_class = CartSerializer
+#     authentication_classes = [JWTAuthentication]
+#     permission_classes = [IsAuthenticated, IsAdminUserCustom]
+#     pagination_class = None
+
+# class CartViewSet(viewsets.ModelViewSet):
+#     queryset = Cart.objects.all()
+#     serializer_class = CartSerializer
+#     authentication_classes = [JWTAuthentication]
+#     permission_classes = [IsAuthenticated]
+#     pagination_class = None
+
+#     def get_queryset(self):
+#         user = self.request.user
+#         if user.is_staff or user.is_superuser:
+#             return Cart.objects.all()
+#         return Cart.objects.filter(user=user)
+
+#        # Override list to return a single active object for normal users
+#     def list(self, request, *args, **kwargs):
+#         user = request.user
+#         if user.is_staff or user.is_superuser:
+#             return super().list(request, *args, **kwargs)
+            
+#         # Get or automatically create the user's active cart
+#         cart, created = Cart.objects.get_or_create(user=user)
+#         serializer = self.get_serializer(cart)
+#         return Response(serializer.data)
+
+#     def perform_create(self, serializer):
+#         user = self.request.user
+        
+#         # Check if the logged-in user is an administrator
+#         if user.is_staff or user.is_superuser:
+#             # Look for a specific user ID provided in the request body payload
+#             target_user_id = self.request.data.get('user')
+            
+#             if target_user_id:
+#                 # Save the cart using the ID provided by the admin
+#                 serializer.save(user_id=target_user_id)
+#             else:
+#                 # If the admin didn't specify a user, fallback to the admin themselves
+#                 serializer.save(user=user)
+#         else:
+#             # Enforce safety for regular customers: always bind to their own account
+#             serializer.save(user=user)
+
+
 class CartViewSet(viewsets.ModelViewSet):
     queryset = Cart.objects.all()
     serializer_class = CartSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdminUserCustom]
+    authentication_classes = [JWTAuthentication] # Sessions are handled manually now
+    permission_classes = [permissions.AllowAny]
     pagination_class = None
+
+    def _get_guest_session_key(self):
+        """Helper to extract the guest key from headers"""
+        # Django converts 'X-Guest-Session-Key' to 'HTTP_X_GUEST_SESSION_KEY'
+        return self.request.META.get('HTTP_X_GUEST_SESSION_KEY')
+
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.is_authenticated and (user.is_staff or user.is_superuser):
+            return Cart.objects.all()
+            
+        if user.is_authenticated:
+            return Cart.objects.filter(user=user)
+            
+        # For guests, filter using the header key
+        session_key = self._get_guest_session_key()
+        if not session_key:
+            return Cart.objects.none()
+        return Cart.objects.filter(session_key=session_key)
+
+    def list(self, request, *args, **kwargs):
+        user = request.user
+        
+        if user.is_authenticated and (user.is_staff or user.is_superuser):
+            return super().list(request, *args, **kwargs)
+            
+        if user.is_authenticated:
+            cart, created = Cart.objects.get_or_create(user=user)
+        else:
+            session_key = self._get_guest_session_key()
+            
+            # If frontend hasn't generated a key yet, make one here
+            if not session_key:
+                session_key = str(uuid.uuid4())
+                
+            cart, created = Cart.objects.get_or_create(session_key=session_key)
+            
+        serializer = self.get_serializer(cart)
+        response_data = serializer.data
+        
+        # If a brand new guest key was made, send it back so frontend can save it
+        if not user.is_authenticated:
+            response_data['guest_session_key'] = cart.session_key
+            
+        return Response(response_data)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        
+        if user.is_authenticated:
+            if user.is_staff or user.is_superuser:
+                target_user_id = self.request.data.get('user')
+                if target_user_id:
+                    serializer.save(user_id=target_user_id)
+                else:
+                    serializer.save(user=user)
+            else:
+                serializer.save(user=user)
+        else:
+            session_key = self._get_guest_session_key() or str(uuid.uuid4())
+            serializer.save(session_key=session_key)
+
+# class CartItemViewSet(viewsets.ModelViewSet):
+#     queryset = CartItem.objects.all()
+#     serializer_class = CartItemSerializer
+#     authentication_classes = [JWTAuthentication]
+#     permission_classes = [IsAuthenticated, IsAdminUserCustom]
+#     pagination_class = None
+
+# class CartItemViewSet(viewsets.ModelViewSet):
+#     queryset = CartItem.objects.all()
+#     serializer_class = CartItemSerializer
+#     authentication_classes = [JWTAuthentication]
+#     # Allow any authenticated customer to modify their cart items
+#     permission_classes = [IsAuthenticated]
+#     pagination_class = None
+
+#     def get_queryset(self):
+#         """
+#         Filter items so a user can only view/modify items inside their own cart.
+#         """
+#         user = self.request.user
+#         if user.is_staff or user.is_superuser:
+#             return CartItem.objects.all()
+#         return CartItem.objects.filter(cart__user=user)
+        
+
 
 class CartItemViewSet(viewsets.ModelViewSet):
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
+    # Keep JWT but let DRF fall back to Session/Anonymous if no token is provided
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdminUserCustom]
+    # Allow anyone (guests and logged-in users) to access the endpoint
+    permission_classes = [permissions.AllowAny]
     pagination_class = None
+
+    def get_queryset(self):
+        """
+        Filter items so a user/guest can only view/modify items inside their own cart.
+        """
+        user = self.request.user
+
+        # 1. Staff and Superusers see everything
+        if user and (user.is_staff or user.is_superuser):
+            return CartItem.objects.all()
+        
+        # 2. Authenticated users see their user-bound cart
+        if user and user.is_authenticated:
+            return CartItem.objects.filter(cart__user=user)
+        
+        # 3. Guests see their cart based on a unique session key header or session
+        guest_session_key = self.request.META.get('HTTP_X_GUEST_SESSION_KEY') or self.request.session.get('cart_id')
+        if guest_session_key:
+            # Change 'cart__session_key' to match whatever field name holds the string key on your Cart model
+            return CartItem.objects.filter(cart__session_key=guest_session_key)
+            
+        return CartItem.objects.none()
+
+
+class AddToCartView(APIView):
+    def post(self, request):
+        product_variant_id = request.data.get('product_variant_id')
+        quantity = int(request.data.get('quantity', 1))
+        session_key = request.data.get('session_key') # Passed from Next.js for guest users
+
+        if not product_variant_id:
+            return Response({"error": "product_variant_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            variant = ProductVariant.objects.get(id=product_variant_id, is_active=True)
+        except ProductVariant.DoesNotExist:
+            return Response({"error": "Product variant not found or inactive."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validate stock
+        if variant.stock_quantity < quantity:
+            return Response({"error": "Insufficient stock available."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Retrieve or create cart for Authenticated vs Guest user
+        if request.user.is_authenticated:
+            cart, _ = Cart.objects.get_or_create(user=request.user)
+        elif session_key:
+            cart, _ = Cart.objects.get_or_create(session_key=session_key, user=None)
+        else:
+            return Response({"error": "Authentication or session_key required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Prevent duplicates: get_or_create or increment quantity if item already exists
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product_variant=variant,
+            defaults={'quantity': quantity}
+        )
+
+        if not created:
+            # Item already exists in cart, update quantity
+            new_quantity = cart_item.quantity + quantity
+            # if variant.stock_quantity < new_quantity:
+            #     return Response({"error": "Cannot add more. Insufficient stock."}, status=status.HTTP_400_BAD_REQUEST)
+
+            cart_item.quantity = new_quantity
+            cart_item.save()
+
+        serializer = CartSerializer(cart)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()

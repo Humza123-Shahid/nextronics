@@ -213,6 +213,15 @@ export default function Header() {
 
   useEffect(() => {
     fetchCart();
+    const handleCartUpdate = () => {
+      fetchCart();
+    };
+
+    window.addEventListener("cartUpdated", handleCartUpdate);
+
+    return () => {
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+    };
   }, []);
   const items = cart?.items || [];
   const subtotal = items.reduce((sum, item) => {
@@ -1066,12 +1075,13 @@ export default function Header() {
 
                   <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                     <Link
-                      href="#cart"
+                      href="/cart"
                       className="relative flex items-center gap-2 sm:gap-2.5 bg-blue-600/10 dark:bg-blue-500/10 border border-blue-500/20 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-slate-900 dark:text-white hover:bg-blue-600 hover:text-white shrink-0"
                     >
                       <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-cyan-400" />
                       <span className="bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow animate-badge-pop">
-                        3
+                        {/* 3 */}
+                        {items.reduce((acc, item) => acc + item.quantity, 0)}
                       </span>
                     </Link>
                   </motion.div>

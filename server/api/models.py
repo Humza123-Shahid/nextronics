@@ -110,7 +110,7 @@ class ProductVariant(models.Model):
     """A purchasable variant of a product, e.g. Red / XL."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
     sku = models.CharField(max_length=100, unique=True)
-    attribute_values = models.ManyToManyField(AttributeValue, related_name='variants')
+    attribute_values = models.ManyToManyField(AttributeValue, blank=True, related_name='variants')
     price_override = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     stock_quantity = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to='variants/', blank=True, null=True)

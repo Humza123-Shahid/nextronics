@@ -69,6 +69,7 @@ interface ProductInput {
   price: number | string;            // <-- Changed to allow string
   compare_at_price?: number | string; // <-- Changed to allow string
   rating: number;
+  variants?: ProductVariant[];
   rating_count: number;
   sales_count: number;      // NEW
   createdAt: string;  // NEW
@@ -81,13 +82,14 @@ interface ApiProduct {
   image: string;
   price: number;
   compare_at_price?: number | null;
+  variants?: ProductVariant[];
   rating: number;          // e.g. 4.5 out of 5
   rating_count: number;
   sales_count: number;
   created_at: string;      // ISO date
 }
 
-function product({ id, slug, image, name, price, compare_at_price, rating, rating_count, sales_count, createdAt }: ProductInput): Product {
+function product({ id, slug, image, name, price, compare_at_price, rating, variants, rating_count, sales_count, createdAt }: ProductInput): Product {
   // 1. Explicitly force string data into clean numbers (removes commas if any exist)
   const numericPrice = typeof price === "string" ? parseFloat(price.replace(/,/g, '')) : Number(price);
   const numericComparePrice = compare_at_price ? (typeof compare_at_price === "string" ? parseFloat(compare_at_price.replace(/,/g, '')) : Number(compare_at_price)) : 0;
@@ -104,7 +106,7 @@ function product({ id, slug, image, name, price, compare_at_price, rating, ratin
     price: numericPrice, // Return clean numeric types to the frontend
     compare_at_price: numericComparePrice > 0 ? numericComparePrice : null,
     discountPercent,
-
+    variants,
     rating,
     rating_count,
     sales_count,
@@ -120,6 +122,7 @@ export function mapApiProduct(p: ApiProduct): Product {
     image: p.image,
     price: p.price,
     compare_at_price: p.compare_at_price ?? undefined,
+    variants: p.variants,
     rating: p.rating,   // 4.5 -> 90
     rating_count: p.rating_count,
     sales_count: p.sales_count,

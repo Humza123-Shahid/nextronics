@@ -1,6 +1,15 @@
 // lib/mappers.ts
 import type { ProductCard } from './api';
 
+
+export interface ProductVariant {
+    id: number;
+    sku: string;
+    price_override?: number;
+    stock_quantity: number;
+    image?: string;
+    is_active: boolean;
+}
 export type VerticalProductItem = {
     id: string;
     name: string;
@@ -9,6 +18,7 @@ export type VerticalProductItem = {
     price: string;
     originalPrice?: string;
     onSale?: boolean;
+    variants?: ProductVariant[];
     rating: number;
     reviewsCount: number;
 };
@@ -34,6 +44,7 @@ export function toVerticalProductItem(p: ProductCard): VerticalProductItem {
             originalPrice: formatPrice(compareAt!),
             onSale: true,
         }),
+        variants: p.variants,
         rating: Number(p.rating),
         reviewsCount: p.rating_count,
     };

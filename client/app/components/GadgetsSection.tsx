@@ -226,6 +226,9 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
         // Perform any custom logic here
         router.push('/products');
     };
+    const triggerCartUpdate = () => {
+        window.dispatchEvent(new Event("cartUpdated"));
+    };
     const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
         try {
             const sessionKey = localStorage.getItem('guest_session_key') || '';
@@ -273,6 +276,7 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
 
             console.log('Cart updated successfully:', data);
             alert('Item added to cart successfully!');
+            triggerCartUpdate();
         } catch (error: any) {
             console.error('Error adding to cart:', error.message);
             alert(error.message || 'Something went wrong');

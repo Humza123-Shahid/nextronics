@@ -47,19 +47,30 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
         # fields = '__all__'
 
-#product variant for cart display or view
+# Product variant serializer supporting both read and write
 class ProductVariantSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
-    #product_name = serializers.CharField(source='product.name', read_only=True)
-    #price = serializers.SerializerMethodField()
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), required=False)
+    product_id = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(), source='product', required=False, write_only=True
+    )
+    attribute_values = serializers.PrimaryKeyRelatedField(
+        queryset=AttributeValue.objects.all(), many=True, required=False
+    )
+
     class Meta:
         model = ProductVariant
-        #fields = '__all__'
-        # fields = ['id', 'sku', 'price','price_override', 'stock_quantity', 'image','is_active', 'product_name','product']
-        fields = ['id', 'sku','price_override', 'stock_quantity', 'image','is_active', 'product']
+        fields = '__all__'
 
-    # def get_price(self, obj):
-    #     return obj.price_override if obj.price_override is not None else obj.product.price   
+    def validate(self, attrs):
+        if not self.instance and not attrs.get('product'):
+            raise serializers.ValidationError({'product': 'Product is required.'})
+        return attrs
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['product_id'] = instance.product_id
+        rep['product_name'] = instance.product.name if instance.product else None
+        return rep   
 
 class AttributeValueSerializer(serializers.ModelSerializer):
     class Meta:

@@ -114,6 +114,7 @@ class SpecialHighlightsView(ListAPIView):
 class ProductVariantViewSet(viewsets.ModelViewSet):
     queryset = ProductVariant.objects.all()
     serializer_class = ProductVariantSerializer
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
@@ -223,7 +224,8 @@ class CartViewSet(viewsets.ModelViewSet):
             return super().list(request, *args, **kwargs)
             
         if user.is_authenticated:
-            cart, created = Cart.objects.get_or_create(user=user)
+            # cart, created = Cart.objects.get_or_create(user=user)
+            cart= Cart.objects.get(user=user)
         else:
             session_key = self._get_guest_session_key()
             
@@ -231,7 +233,8 @@ class CartViewSet(viewsets.ModelViewSet):
             if not session_key:
                 session_key = str(uuid.uuid4())
                 
-            cart, created = Cart.objects.get_or_create(session_key=session_key)
+            # cart, created = Cart.objects.get_or_create(session_key=session_key)
+            cart= Cart.objects.get(session_key=session_key)
             
         serializer = self.get_serializer(cart)
         response_data = serializer.data
@@ -330,9 +333,13 @@ class AddToCartView(APIView):
         except ProductVariant.DoesNotExist:
             return Response({"error": "Product variant not found or inactive."}, status=status.HTTP_404_NOT_FOUND)
 
+        
+        product = Product.objects.get(id=variant.product_id)
+        
+
         # Validate stock
-        if variant.stock_quantity < quantity:
-            return Response({"error": "Insufficient stock available."}, status=status.HTTP_400_BAD_REQUEST)
+        # if variant.stock_quantity < quantity:
+        #     return Response({"error": "Insufficient stock available."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Retrieve or create cart for Authenticated vs Guest user
         if request.user.is_authenticated:
@@ -354,7 +361,8 @@ class AddToCartView(APIView):
             new_quantity = cart_item.quantity + quantity
             # if variant.stock_quantity < new_quantity:
             #     return Response({"error": "Cannot add more. Insufficient stock."}, status=status.HTTP_400_BAD_REQUEST)
-
+            if product.stock_quantity < new_quantity:
+                  return Response({"error": "Cannot add more. Insufficient stock."}, status=status.HTTP_400_BAD_REQUEST)
             cart_item.quantity = new_quantity
             cart_item.save()
 

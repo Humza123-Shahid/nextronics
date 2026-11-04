@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { getAuthCookie } from "@/app/actions/auth";
+
 import {
     Cpu,
     Headset,
@@ -19,7 +21,39 @@ import {
 import { resolveGadgetHref } from "../lib/gadgetsNav"; // adjust path if needed
 
 type NavItem = { name: string; href: string; badge?: "HOT" | "NEW" };
+export interface Product {
+    id: number;
+    name: string;
+    slug: string;
+    price: number; // Base price
+    image: string | null;
+}
 
+export interface ProductVariant {
+    id: number;
+    product: Product;
+    sku: string;
+    price_override: number | null;
+    stock_quantity: number;
+    image: string | null;
+    attribute_summary?: string; // e.g., "Red / XL"
+}
+
+export interface CartItem {
+    id: number;
+    cart: number; // Foreign Key ID pointing to Cart
+    product_variant: ProductVariant;
+    quantity: number;
+    added_at: string;
+}
+export interface Cart {
+    id: number;
+    user: number | null;
+    session_key: string | null;
+    items: CartItem[]; // Accessed via related_name='items' from CartItem
+    created_at: string;
+    updated_at: string;
+}
 const NAV: NavItem[] = [
     { name: "Home", href: "/" },
     { name: "Shop", href: "/shop" },
@@ -103,7 +137,58 @@ function Logo() {
 
 export default function ProductHeader() {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [cart, setCart] = useState<Cart | null>(null);
+    const fetchCart = async () => {
 
+        const token = await getAuthCookie();
+        // const response = await fetch('/api/cart/', {
+        //     credentials: 'include', // Needed for session/cookie auth (guest or logged-in user)
+        // });
+        const guestSessionKey = localStorage.getItem('guest_session_key');
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+
+        // Strictly check that the token is a valid, non-empty string
+        if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+            headers['Authorization'] = `Bearer ${token}`;
+        } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+            headers['X-Guest-Session-Key'] = guestSessionKey;
+        }
+        const response = await fetch('http://127.0.0.1:8080/api/carts/', {
+            method: 'GET',
+            // headers: {
+            //     'Authorization': `Bearer ${token}`,
+            //     'Content-Type': 'application/json'
+            // }
+            headers: headers
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch cart.');
+        // const data: Cart = await response.json();
+        const data = await response.json();
+        // setCart(data);
+        // const userCart = Array.isArray(data) ? data[0] : data.results?.[0];
+        const userCart = Array.isArray(data) ? data[0] : data;
+        setCart(userCart || null);
+
+    };
+
+    useEffect(() => {
+        fetchCart();
+        // Listen for cart update events dispatched from other components (like CartPage)
+        const handleCartUpdate = () => {
+            fetchCart();
+        };
+
+        window.addEventListener("cartUpdated", handleCartUpdate);
+
+        return () => {
+            window.removeEventListener("cartUpdated", handleCartUpdate);
+        };
+    }, []);
+    const items = cart?.items || [];
     // Lock page scroll behind the mobile drawer; close it if the screen grows to desktop
     useEffect(() => {
         if (!mobileOpen) return;
@@ -282,16 +367,16 @@ export default function ProductHeader() {
                             </Link>
                         </li>
                         <li className="relative group">
-                            <Link href="#cart" className={actionLink}>
+                            <Link href="/cart" className={actionLink}>
                                 <span className="relative">
                                     <ShoppingCart className="w-5 h-5" />
-                                    <span className={badge}>0</span>
+                                    <span className={badge}>{items.reduce((acc, item) => acc + item.quantity, 0)}</span>
                                 </span>
                                 <span className="sr-only">Cart</span>
                             </Link>
-                            <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition absolute right-0 top-full w-64 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-b-lg shadow-xl p-5 text-center">
+                            {/* <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition absolute right-0 top-full w-64 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-b-lg shadow-xl p-5 text-center">
                                 <h4 className="text-sm font-bold">Your cart is empty</h4>
-                            </div>
+                            </div> */}
                         </li>
                     </ul>
                 </div>

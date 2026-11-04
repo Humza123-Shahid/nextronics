@@ -91,6 +91,15 @@ export default function AddProductVariantModal() {
                 await addProductVariant(payload);
             }
 
+            setFormData({
+                product: '',
+                sku: '',
+                price_override: '',
+                stock_quantity: '0',
+                is_active: true,
+            });
+            setSelectedAttributeValues([]);
+            setImageFile(null);
             setIsAddProductVariantModalOpen(false);
         } catch (err: any) {
             console.error("Add Product Variant Error:", err);

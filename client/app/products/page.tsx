@@ -159,6 +159,9 @@ export default function ProductDetailage() {
       setQuantity(prev => prev - 1);
     }
   };
+  const triggerCartUpdate = () => {
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
   const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
     try {
       const sessionKey = localStorage.getItem('guest_session_key') || '';
@@ -206,6 +209,7 @@ export default function ProductDetailage() {
 
       console.log('Cart updated successfully:', data);
       alert('Item added to cart successfully!');
+      triggerCartUpdate();
     } catch (error: any) {
       console.error('Error adding to cart:', error.message);
       alert(error.message || 'Something went wrong');

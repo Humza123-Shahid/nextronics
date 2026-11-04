@@ -14,74 +14,34 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
         headers,
     });
 
-    // if (!response.ok) {
-    //     const errorData = await response.json().catch(() => ({}));
-    //     console.error("Backend API Error:", errorData);
-
-    //     const errorMessage =
-    //         errorData.detail ||
-    //         (typeof errorData === "object" ? JSON.stringify(errorData) : null) ||
-    //         `Request failed with status ${response.status}`;
-
-    //     throw new Error(errorMessage);
-    // }
     if (!response.ok) {
-        //// 1. Capture the raw text in case it's not valid JSON
         const rawText = await response.text().catch(() => "");
         let errorData: any = {};
-        try { errorData = JSON.parse(rawText); } catch { errorData = { rawMessage: rawText }; }
+        try {
+            errorData = JSON.parse(rawText);
+        } catch {
+            errorData = { rawMessage: rawText };
+        }
 
         console.error("Backend API Error:", response.status, errorData);
 
-        throw new Error(
-            errorData.detail ||
-            errorData.message ||
-            errorData.rawMessage ||
-            `HTTP Error ${response.status}`
-        );
-        // const rawText = await response.text().catch(() => "");
+        let formattedError = errorData.detail || errorData.message || "";
+        if (!formattedError && typeof errorData === "object") {
+            const fieldErrors = Object.entries(errorData)
+                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+                .join("; ");
+            if (fieldErrors) formattedError = fieldErrors;
+        }
+        if (!formattedError) formattedError = errorData.rawMessage || `HTTP Error ${response.status}`;
 
-        // let errorData = {};
-        // try {
-        //     errorData = JSON.parse(rawText);
-        // } catch {
-        //     errorData = { rawMessage: rawText };
-        // }
-
-        // // 2. Enhanced logging to see what went wrong
-        // console.error("Backend API Error Status:", response.status);
-        // console.error("Backend API Error Data:", errorData);
-
-        // //     const errorMessage =
-        // //         errorData.detail ||
-        // //         errorData.message ||
-        // //         errorData.rawMessage ||
-        // //         `HTTP Error ${response.status}`;
-
-        // //     throw new Error(errorMessage);
-        // // }
-
+        throw new Error(formattedError);
     }
+
     if (response.status === 204) {
         return {} as T;
     }
 
     return response.json();
-    // const responseBody = await response.text();
-    // let data;
-    // try {
-    //     data = responseBody ? JSON.parse(responseBody) : null;
-    // } catch {
-    //     data = responseBody;
-    // }
-
-    // if (!response.ok) {
-    //     console.error("Backend API Error Status:", response.status);
-    //     console.error("Backend API Error Data:", data);
-    //     throw new Error(`API Error: ${response.status}`);
-    // }
-
-    // return data;
 }
 
 export const api = {

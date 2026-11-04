@@ -1,4 +1,12 @@
 // lib/api.ts
+export interface ProductVariant {
+    id: number;
+    sku: string;
+    price_override?: number;
+    stock_quantity: number;
+    image?: string;
+    is_active: boolean;
+}
 export type ProductCard = {
     id: number;
     name: string;
@@ -8,6 +16,7 @@ export type ProductCard = {
     price: string;               // DRF returns decimals as strings
     compare_at_price: string | null;
     // discount_percent: number;
+    variants?: ProductVariant[];
     rating: string;
     rating_count: number;
     category: string | null;

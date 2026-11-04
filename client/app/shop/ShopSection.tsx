@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { getAuthCookie } from "@/app/actions/auth";
 import {
     motion,
     useMotionValue,
@@ -189,21 +190,76 @@ export default function ShopSection() {
         // Save the clicked product ID to localStorage
         localStorage.setItem("productID", productId);
     };
+    // const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
+    //     try {
+    //         const sessionKey = localStorage.getItem('cart_session_key') || '';
+
+    //         const response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({
+    //                 product_variant_id: productVariantId,
+    //                 quantity: quantity,
+    //                 session_key: sessionKey,
+    //             }),
+    //         });
+
+    //         const data = await response.json();
+
+    //         if (!response.ok) {
+    //             throw new Error(data.error || 'Failed to add item to cart');
+    //         }
+
+    //         // Save session key for guest users if returned by backend
+    //         if (data.session_key && !sessionKey) {
+    //             localStorage.setItem('cart_session_key', data.session_key);
+    //         }
+
+    //         console.log('Cart updated successfully:', data);
+    //         alert('Item added to cart successfully!');
+    //     } catch (error: any) {
+    //         console.error('Error adding to cart:', error.message);
+    //         alert(error.message || 'Something went wrong');
+    //     }
+    // };
+    const triggerCartUpdate = () => {
+        window.dispatchEvent(new Event("cartUpdated"));
+    };
     const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
         try {
-            const sessionKey = localStorage.getItem('cart_session_key') || '';
+            const sessionKey = localStorage.getItem('guest_session_key') || '';
+            const token = await getAuthCookie();
+            let response;
+            if (!token) {
+                response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_variant_id: productVariantId,
+                        quantity: quantity,
+                        session_key: sessionKey,
+                    }),
+                });
+            }
+            else {
+                response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_variant_id: productVariantId,
+                        quantity: quantity,
+                        session_key: sessionKey,
+                    }),
+                });
+            }
 
-            const response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    product_variant_id: productVariantId,
-                    quantity: quantity,
-                    session_key: sessionKey,
-                }),
-            });
 
             const data = await response.json();
 
@@ -218,11 +274,12 @@ export default function ShopSection() {
 
             console.log('Cart updated successfully:', data);
             alert('Item added to cart successfully!');
+            triggerCartUpdate();
         } catch (error: any) {
             console.error('Error adding to cart:', error.message);
             alert(error.message || 'Something went wrong');
         }
-    };
+    }
     return (
         <section className="bg-slate-50 dark:bg-[#090d18] text-slate-900 dark:text-slate-100 py-10 sm:py-14">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[250px_1fr] gap-8">

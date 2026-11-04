@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import {
   Product,
   PageVisit,
@@ -361,6 +361,8 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 // export function AdminProvider({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
 export function AdminProvider({ children }: { children: React.ReactNode }) {
 
+  const initialFetchRef = useRef<Record<string, boolean>>({});
+
   // Helper to enrich raw Address records with user email
 
   const [accessToken, setAccessToken] = useState<string | null>(() => {
@@ -520,7 +522,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       // 1. Resolve Order & associated User Email
       const matchedOrder = orderList.find((o) => String(o.id) === String(orderId));
       const userId = matchedOrder?.user_id ?? (typeof matchedOrder?.user === "object" ? (matchedOrder.user as any)?.id : matchedOrder?.user);
-      const matchedUser = userList.find((u) => String(u.id) === String(userId));
+      const matchedUser = userList?.find((u) => String(u.id) === String(userId));
 
       const orderNumDisplay = matchedOrder?.order_number || `Order #${orderId}`;
       const userEmailDisplay = matchedUser?.email || (matchedOrder as any)?.user_email || "Guest / N/A";
@@ -674,11 +676,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Load database entities on initial mount
   useEffect(() => {
-    const initData = async () => {
-      if (!users.length || !addresses.length) await fetchUsersAndAddresses();
-    };
-    initData();
-  }, [accessToken, users, addresses, fetchUsersAndAddresses]);
+    if (!initialFetchRef.current.usersAndAddresses) {
+      initialFetchRef.current.usersAndAddresses = true;
+      fetchUsersAndAddresses();
+    }
+  }, [fetchUsersAndAddresses]);
   const fetchOrders = useCallback(async () => {
     try {
       const token = await getAuthToken();
@@ -691,10 +693,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, [users, addresses, enrichOrderWithRelationNames, getAuthToken]);
   useEffect(() => {
-    if (users.length >= 0 || addresses.length >= 0) {
-      if (!orders.length) fetchOrders();
+    if (!initialFetchRef.current.orders) {
+      initialFetchRef.current.orders = true;
+      fetchOrders();
     }
-  }, [users, addresses, accessToken, orders, fetchOrders]);
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      setOrders((prev) => prev.map((o) => enrichOrderWithRelationNames(o, users, addresses)));
+    }
+  }, [users, addresses, enrichOrderWithRelationNames]);
   // Sync theme class with HTML element
   useEffect(() => {
     const root = document.documentElement;
@@ -792,8 +801,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, [getAuthToken]);
   useEffect(() => {
-    if (!brands.length) fetchBrands();
-  }, [accessToken, brands, fetchBrands]);
+    if (!initialFetchRef.current.brands) {
+      initialFetchRef.current.brands = true;
+      fetchBrands();
+    }
+  }, [fetchBrands]);
   const fetchProducts = useCallback(async () => {
     try {
       const data = await api.get<Product[]>("/products/");
@@ -854,19 +866,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [accessToken, fetchTestimonials]);
 
   useEffect(() => {
+    if (initialFetchRef.current.initialData) return;
+    initialFetchRef.current.initialData = true;
+
     const loadInitialData = async () => {
       setIsLoading(true);
-      // if (accessToken) {
-      //   fetchTestimonials();
-      // }
-      if (!views.length) fetchViews();
+      fetchViews();
       const token = await getAuthToken();
-      if (!token) return;
       const [fetchedCats, fetchedBrs] = await Promise.all([
         api.get<CategoryItem[]>("/categories/").catch(() => []),
-        !brands.length ? api.get<Brand[]>("/brands/", token || undefined).catch(() => []) : brands,
-        //fetchOrders(),
-        ////fetchCustomers(),
+        api.get<Brand[]>("/brands/", token || undefined).catch(() => []),
       ]);
 
       if (fetchedCats.length > 0) setCategories(fetchedCats);
@@ -885,10 +894,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    if (!brands.length || !products.length || !categories.length) loadInitialData();
-    //// }, [enrichProductWithRelationNames, fetchOrders, fetchViews, accessToken, fetchTestimonials]);
-    // }, [enrichProductWithRelationNames, fetchOrders, fetchViews]);
-  }, [enrichProductWithRelationNames, getAuthToken, brands, products, categories]);
+    loadInitialData();
+  }, [enrichProductWithRelationNames, getAuthToken, fetchViews]);
 
   // useEffect(() => {
   //   if (!socials.length) fetchSocials();   // empty array → fetch → new empty array → fetch...
@@ -1012,8 +1019,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (!warehouses.length) fetchWarehouses();
-  }, [accessToken, warehouses, fetchWarehouses]);
+    if (!initialFetchRef.current.warehouses) {
+      initialFetchRef.current.warehouses = true;
+      fetchWarehouses();
+    }
+  }, [fetchWarehouses]);
 
   // Inventory State & Modals
   const [inventories, setInventories] = useState<Inventory[]>([]);
@@ -1126,10 +1136,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (productVariants.length >= 0 || warehouses.length >= 0) {
-      if (!inventories.length) fetchInventories();
+    if (!initialFetchRef.current.inventories) {
+      initialFetchRef.current.inventories = true;
+      fetchInventories();
     }
-  }, [productVariants, warehouses, accessToken, inventories, fetchInventories]);
+  }, [fetchInventories]);
+
+  useEffect(() => {
+    if (inventories.length > 0) {
+      setInventories((prev) =>
+        prev.map((inv) => enrichInventoryWithRelationNames(inv, productVariants, warehouses, products))
+      );
+    }
+  }, [productVariants, warehouses, products, enrichInventoryWithRelationNames]);
 
 
   // Place inside `AdminProvider` function:
@@ -1177,10 +1196,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (users.length >= 0) {
-      if (!carts.length) fetchCarts();
+    if (!initialFetchRef.current.carts) {
+      initialFetchRef.current.carts = true;
+      fetchCarts();
     }
-  }, [users, accessToken, carts, fetchCarts]);
+  }, [fetchCarts]);
+
+  useEffect(() => {
+    if (carts.length > 0) {
+      setCarts((prev) => prev.map((c) => enrichCartWithUserEmail(c, users)));
+    }
+  }, [users, enrichCartWithUserEmail]);
 
 
   // CartItems State & Modals
@@ -1287,10 +1313,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (carts.length >= 0 && productVariants.length >= 0) {
-      if (!cartItems.length) fetchCartItems();
+    if (!initialFetchRef.current.cartItems) {
+      initialFetchRef.current.cartItems = true;
+      fetchCartItems();
     }
-  }, [carts, productVariants, accessToken, cartItems, fetchCartItems]);
+  }, [fetchCartItems]);
+
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      setCartItems((prev) =>
+        prev.map((item) => enrichCartItemWithRelations(item, carts, productVariants, products, users))
+      );
+    }
+  }, [carts, productVariants, products, users, enrichCartItemWithRelations]);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -1334,15 +1369,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    console.log(notifications.length, "notifications.length")
-    if (users.length > 0) {
-      if (!notifications.length) {
-        console.log("Notifications not found")
-        fetchNotifications();
-      }
+    if (!initialFetchRef.current.notifications) {
+      initialFetchRef.current.notifications = true;
+      fetchNotifications();
     }
-    // }, [users, accessToken, notifications, fetchNotifications]);
-  }, [users, accessToken, notifications, fetchNotifications]);
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    if (notifications.length > 0) {
+      setNotifications((prev) => prev.map((n) => enrichNotificationWithUserEmail(n, users)));
+    }
+  }, [users, enrichNotificationWithUserEmail]);
   const fetchAttributeValues = useCallback(async () => {
     try {
       const token = await getAuthToken();
@@ -1392,14 +1429,26 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (!attributeValues.length) fetchAttributeValues();
-  }, [accessToken, attributeValues, fetchAttributeValues]);
+    if (!initialFetchRef.current.attributeValues) {
+      initialFetchRef.current.attributeValues = true;
+      fetchAttributeValues();
+    }
+  }, [fetchAttributeValues]);
 
   useEffect(() => {
-    if (products.length > 0) {
-      if (!productVariants.length) fetchProductVariants();
+    if (!initialFetchRef.current.productVariants) {
+      initialFetchRef.current.productVariants = true;
+      fetchProductVariants();
     }
-  }, [products, accessToken, productVariants, fetchProductVariants]);
+  }, [fetchProductVariants]);
+
+  useEffect(() => {
+    if (productVariants.length > 0) {
+      setProductVariants((prev) =>
+        prev.map((v) => enrichVariantWithRelationNames(v, products))
+      );
+    }
+  }, [products, enrichVariantWithRelationNames]);
 
 
   // Attribute Values CRUD Actions
@@ -1526,10 +1575,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (orders.length >= 0 && products.length >= 0 && productVariants.length >= 0) {
-      if (!orderItems.length) fetchOrderItems();
+    if (!initialFetchRef.current.orderItems) {
+      initialFetchRef.current.orderItems = true;
+      fetchOrderItems();
     }
-  }, [orders, products, productVariants, accessToken, orderItems, fetchOrderItems]);
+  }, [fetchOrderItems]);
+
+  useEffect(() => {
+    if (orderItems.length > 0) {
+      setOrderItems((prev) =>
+        prev.map((item) => enrichOrderItemWithRelations(item, orders, products, productVariants, users))
+      );
+    }
+  }, [orders, products, productVariants, enrichOrderItemWithRelations]);
 
 
 
@@ -1587,10 +1645,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (orders.length >= 0) {
-      if (!payments.length) fetchPayments();
+    if (!initialFetchRef.current.payments) {
+      initialFetchRef.current.payments = true;
+      fetchPayments();
     }
-  }, [orders, accessToken, payments, fetchPayments]);
+  }, [fetchPayments]);
+
+  useEffect(() => {
+    if (payments.length > 0) {
+      setPayments((prev) => prev.map((p) => enrichPaymentWithOrderDetails(p, orders, users)));
+    }
+  }, [orders, users, enrichPaymentWithOrderDetails]);
 
 
   // ShippingMethods State & Modals
@@ -1645,8 +1710,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (!shippingMethods.length) fetchShippingMethods();
-  }, [accessToken, shippingMethods, fetchShippingMethods]);
+    if (!initialFetchRef.current.shippingMethods) {
+      initialFetchRef.current.shippingMethods = true;
+      fetchShippingMethods();
+    }
+  }, [fetchShippingMethods]);
 
 
 
@@ -1755,11 +1823,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Auto-fetch effect for Shipments when dependent relational data is available
   useEffect(() => {
-    if (orders.length >= 0 && shippingMethods.length >= 0) {
-      if (!shipments.length) fetchShipments();
-
+    if (!initialFetchRef.current.shipments) {
+      initialFetchRef.current.shipments = true;
+      fetchShipments();
     }
-  }, [orders, shippingMethods, accessToken, shipments, fetchShipments]);
+  }, [fetchShipments]);
+
+  useEffect(() => {
+    if (shipments.length > 0) {
+      setShipments((prev) =>
+        prev.map((item) => enrichShipmentWithRelations(item, orders, shippingMethods, users))
+      );
+    }
+  }, [orders, shippingMethods, users, enrichShipmentWithRelations]);
 
   // Customers CRUD
   const addCustomer = async (
@@ -1836,8 +1912,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, [users, enrichAddressWithUserEmail, getAuthToken]);
   useEffect(() => {
-    if (!addresses.length) fetchAddresses();
-  }, [accessToken, addresses, fetchAddresses]);
+    if (!initialFetchRef.current.addresses) {
+      initialFetchRef.current.addresses = true;
+      fetchAddresses();
+    }
+  }, [fetchAddresses]);
+
+  useEffect(() => {
+    if (addresses.length > 0) {
+      setAddresses((prev) => prev.map((a) => enrichAddressWithUserEmail(a, users)));
+    }
+  }, [users, enrichAddressWithUserEmail]);
   const addAddress = async (newAddr: Omit<Address, "id" | "created_at">) => {
     const token = await getAuthToken();
     const payload = {
@@ -2003,8 +2088,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   //   fetchSocials();
   // }, [fetchSocials]);
   useEffect(() => {
-    if (!socials.length) fetchSocials();   // empty array → fetch → new empty array → fetch...
-  }, [socials, accessToken, fetchSocials]);
+    if (!initialFetchRef.current.socials) {
+      initialFetchRef.current.socials = true;
+      fetchSocials();
+    }
+  }, [fetchSocials]);
   const unreadNotificationsCount = notifications.filter((n) => !n.is_read && n.notification_type == "system").length;
   const unreadMessagesCount = messages.filter((m) => m.unread).length;
 

@@ -41,6 +41,7 @@ export default function EditProductVariantModal() {
             setFormData({
                 product: prodId,
                 sku: variant.sku ?? "",
+                existingImage: variant.image || "",
                 price_override: variant.price_override ?? "",
                 stock_quantity: variant.stock_quantity ?? 0,
                 is_active: !!variant.is_active,
@@ -213,6 +214,7 @@ export default function EditProductVariantModal() {
                             <label htmlFor="is_active_edit_variant" className="text-white font-medium cursor-pointer">
                                 Is Active
                             </label>
+
                         </div>
                     </div>
 
@@ -225,6 +227,12 @@ export default function EditProductVariantModal() {
                             onChange={handleFileChange}
                             className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:bg-blue-600 file:text-white hover:file:bg-blue-700"
                         />
+                        {formData.existingImage && !formData.image && (
+                            <p className="mt-1 text-[10px] text-[#8A99AD] truncate">Current: {formData.existingImage}</p>
+                        )}
+                        {formData.image instanceof File && (
+                            <p className="mt-1 text-[10px] text-amber-400">New File: {formData.image.name}</p>
+                        )}
                     </div>
 
                     {/* Row 4: Attribute Values Selection */}

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type SVGProps } from "react";
 import { useRouter } from 'next/navigation';
+import { getAuthCookie } from "@/app/actions/auth";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./BestSellingProducts.module.css";
@@ -191,6 +192,62 @@ function ProductCard({
     // Perform any custom logic here
     router.push('/products');
   };
+  const triggerCartUpdate = () => {
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+  const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
+    try {
+      const sessionKey = localStorage.getItem('guest_session_key') || '';
+      const token = await getAuthCookie();
+      let response;
+      if (!token) {
+        response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            product_variant_id: productVariantId,
+            quantity: quantity,
+            session_key: sessionKey,
+          }),
+        });
+      }
+      else {
+        response = await fetch('http://127.0.0.1:8080/api/cart/add/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            product_variant_id: productVariantId,
+            quantity: quantity,
+            session_key: sessionKey,
+          }),
+        });
+      }
+
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add item to cart');
+      }
+
+      // Save session key for guest users if returned by backend
+      if (data.session_key && !sessionKey) {
+        localStorage.setItem('cart_session_key', data.session_key);
+      }
+
+      console.log('Cart updated successfully:', data);
+      alert('Item added to cart successfully!');
+      triggerCartUpdate();
+    } catch (error: any) {
+      console.error('Error adding to cart:', error.message);
+      alert(error.message || 'Something went wrong');
+    }
+  }
   return (
     <motion.article
       className={styles.card}
@@ -222,7 +279,18 @@ function ProductCard({
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={() => onAddToCart(product)}
+              //onClick={() => onAddToCart(product)}
+              onClick={(e) => {
+                e.preventDefault();  // Prevents the <a> link from navigating
+                e.stopPropagation(); // Prevents bubbling up to the parent card link
+
+                // Grab the first active variant's ID, or fallback to product ID if no variants exist
+                const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+                //console.log(product);
+                const productVariantId = defaultVariant ? defaultVariant.id : product.id;
+                //console.log(productVariantId);
+                handleAddToCart(productVariantId, 1);
+              }}
               aria-label={`Add ${product.name} to cart`}
               title="Add to Cart"
             >

@@ -258,7 +258,7 @@ export default function VerticalProductSlider({
   slides,
 }: { onAddToCart?: (productName: string) => void, autoPlayInterval?: number, slides: VerticalProductItem[][] }) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  console.log(slides)
+  // console.log(slides)
   const [direction, setDirection] = useState(1);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);

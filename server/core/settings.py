@@ -171,5 +171,6 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    'x-client-type',
     "x-guest-session-key", # Add your custom header here
 ]

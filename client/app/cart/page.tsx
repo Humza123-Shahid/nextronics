@@ -20,7 +20,7 @@ export interface Product {
 
 export interface ProductVariant {
     id: number;
-    product: Product;
+    product_detail: Product;
     sku: string;
     price_override: number | null;
     stock_quantity: number;
@@ -31,7 +31,7 @@ export interface ProductVariant {
 export interface CartItem {
     id: number;
     cart: number; // Foreign Key ID pointing to Cart
-    product_variant: ProductVariant;
+    product_variant_detail: ProductVariant;
     quantity: number;
     added_at: string;
 }
@@ -183,9 +183,10 @@ export default function CartPage() {
     // --- Price Calculations ---
     // cart.items references the related_name='items' from CartItem model
     const items = cart?.items || [];
+    console.log(items);
     const subtotal = items.reduce((sum, item) => {
-        const variant = item.product_variant;
-        const effectivePrice = variant.price_override ?? variant.product.price;
+        const variant = item.product_variant_detail;
+        const effectivePrice = variant.price_override ?? variant.product_detail.price;
         return sum + Number(effectivePrice) * item.quantity;
     }, 0);
 
@@ -252,8 +253,8 @@ export default function CartPage() {
                         <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                             <ul className="divide-y divide-gray-100">
                                 {items.map((item) => {
-                                    const variant = item.product_variant;
-                                    const product = variant.product;
+                                    const variant = item.product_variant_detail;
+                                    const product = variant.product_detail;
                                     const itemPrice = variant.price_override ?? product.price;
                                     const imageUrl = product.image || variant.image || '/placeholder.png';
                                     const isUpdating = updatingId === item.id;

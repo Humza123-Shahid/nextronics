@@ -7,6 +7,9 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
     const headers: Record<string, string> = {
         ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(options.headers as Record<string, string>),
+
+        'X-Client-Type': 'admin'
+
     };
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {

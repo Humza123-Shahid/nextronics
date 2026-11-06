@@ -45,7 +45,7 @@ export interface Product {
 
 export interface ProductVariant {
   id: number;
-  product: Product;
+  product_detail: Product;
   sku: string;
   price_override: number | null;
   stock_quantity: number;
@@ -56,7 +56,7 @@ export interface ProductVariant {
 export interface CartItem {
   id: number;
   cart: number; // Foreign Key ID pointing to Cart
-  product_variant: ProductVariant;
+  product_variant_detail: ProductVariant;
   quantity: number;
   added_at: string;
 }
@@ -204,7 +204,9 @@ export default function Header() {
         }
 
         const data = await response.json();
-        setCart(data);
+        // setCart(data);
+        const userCart = Array.isArray(data) ? data[0] : data;
+        setCart(userCart || null);
       } catch (error) {
         console.error("Cart retrieval failed:", error);
       }
@@ -224,9 +226,10 @@ export default function Header() {
     };
   }, []);
   const items = cart?.items || [];
+  console.log(items);
   const subtotal = items.reduce((sum, item) => {
-    const variant = item.product_variant;
-    const effectivePrice = variant.price_override ?? variant.product.price;
+    const variant = item.product_variant_detail;
+    const effectivePrice = variant.price_override ?? variant.product_detail.price;
     return sum + Number(effectivePrice) * item.quantity;
   }, 0);
 
@@ -1062,7 +1065,7 @@ export default function Header() {
                     </Link>
                   </motion.div>
 
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  {/* <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                     <Link
                       href={isAuthenticated ? (isAdmin ? "/admin" : "/signin") : "/signin"}
                       className={compactIconBtnClasses}
@@ -1070,9 +1073,110 @@ export default function Header() {
                     >
                       <User className="w-5 h-5 stroke-[1.75px]" />
                     </Link>
-                  </motion.div>
+                  </motion.div> */}
 
+                  <div className="relative" ref={accountDropdownRef}>
+                    {isAuthenticated ? (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                          className="p-1.5 sm:p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 cursor-pointer"
+                          title="Account Menu"
+                        >
+                          {/* <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 p-0.5 flex items-center justify-center text-white shrink-0">
+                            <div className="w-full h-full rounded-full bg-[#0c101d] flex items-center justify-center text-xs font-bold text-cyan-400">
+                              {user?.username?.charAt(0).toUpperCase() || "U"}
+                            </div>
+                          </div>
+                          <div className="hidden xl:flex flex-col text-left text-xs leading-tight">
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              {isAdmin ? (
+                                <span className="text-blue-400 font-semibold flex items-center gap-0.5">
+                                  <ShieldCheck className="w-3 h-3" /> Admin
+                                </span>
+                              ) : (
+                                "Customer"
+                              )}
+                            </span>
+                            <span className="font-semibold truncate max-w-[95px]">
+                              {user?.first_name || user?.username}
+                            </span>
+                          </div>
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden xl:block" /> */}
+                          <User className="w-5 h-5 stroke-[1.75px]" />
+                        </button>
 
+                        <AnimatePresence>
+                          {accountDropdownOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute right-0 mt-2 w-56 rounded-xl bg-[#0d1322] border border-slate-800 shadow-2xl p-2 z-50 text-xs"
+                            >
+                              <div className="px-3 py-2 border-b border-slate-800 mb-1">
+                                <p className="font-bold text-white truncate">{user?.username}</p>
+                                <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+                                {isAdmin && (
+                                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-600/30 text-blue-300 border border-blue-500/30">
+                                    Administrator
+                                  </span>
+                                )}
+                              </div>
+
+                              {isAdmin && (
+                                <Link
+                                  href="/admin"
+                                  onClick={() => setAccountDropdownOpen(false)}
+                                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-blue-400 hover:bg-slate-800/80 hover:text-cyan-300 transition-colors font-semibold"
+                                >
+                                  <ShieldCheck className="w-4 h-4" />
+                                  <span>Admin Dashboard</span>
+                                </Link>
+                              )}
+
+                              <Link
+                                href="/shop"
+                                onClick={() => setAccountDropdownOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 hover:text-white transition-colors"
+                              >
+                                <ShoppingBag className="w-4 h-4 text-cyan-400" />
+                                <span>Browse Shop</span>
+                              </Link>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  logout();
+                                  setAccountDropdownOpen(false);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors text-left mt-1 border-t border-slate-800/80 cursor-pointer"
+                              >
+                                <LogOut className="w-4 h-4" />
+                                <span>Sign Out</span>
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link
+                          href="/signin"
+                          className="p-1.5 sm:p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5"
+                          title="Sign In"
+                        >
+                          <User className="w-5 h-5 stroke-[1.75px]" />
+                          <div className="hidden xl:flex flex-col text-left text-xs leading-tight">
+                            <span className="text-[10px] text-slate-400">Account</span>
+                            <span className="font-semibold">Sign In</span>
+                          </div>
+                        </Link>
+                      </motion.div>
+                    )}
+                  </div>
                   <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                     <Link
                       href="/cart"

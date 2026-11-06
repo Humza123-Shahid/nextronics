@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getAuthCookie } from "@/app/actions/auth";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Cpu,
@@ -17,9 +18,42 @@ import {
     ChevronDown,
 } from "lucide-react";
 import { resolveGadgetHref } from "../lib/gadgetsNav"; // adjust path if needed
+import { useAuth } from "../context/AuthContext";
 
 type NavItem = { name: string; href: string; badge?: "HOT" | "NEW" };
+export interface Product {
+    id: number;
+    name: string;
+    slug: string;
+    price: number; // Base price
+    image: string | null;
+}
 
+export interface ProductVariant {
+    id: number;
+    product: Product;
+    sku: string;
+    price_override: number | null;
+    stock_quantity: number;
+    image: string | null;
+    attribute_summary?: string; // e.g., "Red / XL"
+}
+
+export interface CartItem {
+    id: number;
+    cart: number; // Foreign Key ID pointing to Cart
+    product_variant: ProductVariant;
+    quantity: number;
+    added_at: string;
+}
+export interface Cart {
+    id: number;
+    user: number | null;
+    session_key: string | null;
+    items: CartItem[]; // Accessed via related_name='items' from CartItem
+    created_at: string;
+    updated_at: string;
+}
 const NAV: NavItem[] = [
     { name: "Home", href: "/" },
     { name: "Shop", href: "/shop" },
@@ -49,7 +83,11 @@ function NavBadge({ type }: { type: "HOT" | "NEW" }) {
         </span>
     );
 }
-
+type DropdownItem = {
+    name: string;
+    href?: string;
+    onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+};
 /** Small hover dropdown used in the top utility bar */
 function TopDropdown({
     label,
@@ -58,7 +96,7 @@ function TopDropdown({
 }: {
     label: string;
     icon?: React.ReactNode;
-    items: { name: string; href: string }[];
+    items: DropdownItem[];
 }) {
     return (
         <li className="relative group">
@@ -71,16 +109,29 @@ function TopDropdown({
                 <ChevronDown className="w-3 h-3" />
             </button>
             <ul className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition absolute right-0 top-full min-w-[130px] bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-b-lg shadow-xl z-50 py-1">
-                {items.map((i) => (
-                    <li key={i.name}>
-                        <Link
-                            href={i.href}
-                            className="block px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-cyan-400"
+                {items.map((item, index) => {
+                    if (item.onClick) {
+                        return (
+                            <button
+                                key={index}
+                                onClick={item.onClick}
+                                className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                                {item.name}
+                            </button>
+                        );
+                    }
+
+                    return (
+                        <a
+                            key={index}
+                            href={item.href}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                            {i.name}
-                        </Link>
-                    </li>
-                ))}
+                            {item.name}
+                        </a>
+                    );
+                })}
             </ul>
         </li>
     );
@@ -103,7 +154,78 @@ function Logo() {
 
 export default function ContactHeader() {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const { user, isAuthenticated, isAdmin, logout } = useAuth();
+    const [cart, setCart] = useState<Cart | null>(null);
+    const handleSignOut = (e: React.MouseEvent) => {
+        e.preventDefault();
+        logout(); // Your sign-out logic h    ere
+    };
+    const dropdownItems = !isAuthenticated
+        ? [
+            { name: "Sign In", href: "/signin" },
+            { name: "Sign Up", href: "/signup" },
+        ]
+        : isAdmin
+            ? [
+                { name: "Admin Dashboard", href: "/admin" },
+                { name: "Browse Shop", href: "/shop" },
+                { name: "Sign Out", onClick: handleSignOut },
+            ]
+            : [
+                { name: "Browse Shop", href: "/shop" },
+                { name: "Sign Out", onClick: handleSignOut },
+            ];
+    const fetchCart = async () => {
 
+        const token = await getAuthCookie();
+        // const response = await fetch('/api/cart/', {
+        //     credentials: 'include', // Needed for session/cookie auth (guest or logged-in user)
+        // });
+        const guestSessionKey = localStorage.getItem('guest_session_key');
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+
+        // Strictly check that the token is a valid, non-empty string
+        if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+            headers['Authorization'] = `Bearer ${token}`;
+        } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+            headers['X-Guest-Session-Key'] = guestSessionKey;
+        }
+        const response = await fetch('http://127.0.0.1:8080/api/carts/', {
+            method: 'GET',
+            // headers: {
+            //     'Authorization': `Bearer ${token}`,
+            //     'Content-Type': 'application/json'
+            // }
+            headers: headers
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch cart.');
+        // const data: Cart = await response.json();
+        const data = await response.json();
+        // setCart(data);
+        // const userCart = Array.isArray(data) ? data[0] : data.results?.[0];
+        const userCart = Array.isArray(data) ? data[0] : data;
+        setCart(userCart || null);
+
+    };
+
+    useEffect(() => {
+        fetchCart();
+        // Listen for cart update events dispatched from other components (like CartPage)
+        const handleCartUpdate = () => {
+            fetchCart();
+        };
+
+        window.addEventListener("cartUpdated", handleCartUpdate);
+
+        return () => {
+            window.removeEventListener("cartUpdated", handleCartUpdate);
+        };
+    }, []);
+    const items = cart?.items || [];
     // Lock page scroll behind the mobile drawer; close it if the screen grows to desktop
     useEffect(() => {
         if (!mobileOpen) return;
@@ -220,13 +342,18 @@ export default function ContactHeader() {
                                 { name: "INR", href: "#cur-inr" },
                             ]}
                         />
-                        <TopDropdown
+                        {/* <TopDropdown
                             label="My Account"
                             icon={<User className="w-3.5 h-3.5" />}
                             items={[
                                 { name: "Sign In", href: "/signin" },
                                 { name: "Sign Up", href: "/signup" },
                             ]}
+                        /> */}
+                        <TopDropdown
+                            label={isAuthenticated ? `Hello, ${user?.first_name || 'Account'}` : "My Account"}
+                            icon={<User className="w-3.5 h-3.5" />}
+                            items={dropdownItems}
                         />
                     </ul>
                 </div>
@@ -283,7 +410,7 @@ export default function ContactHeader() {
                             <Link href="#cart" className={actionLink}>
                                 <span className="relative">
                                     <ShoppingCart className="w-5 h-5" />
-                                    <span className={badge}>0</span>
+                                    <span className={badge}>{items.reduce((acc, item) => acc + item.quantity, 0)}</span>
                                 </span>
                                 <span className="sr-only">Cart</span>
                             </Link>

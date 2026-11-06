@@ -72,7 +72,7 @@ interface AuthContextType {
 // Decode JWT exp (ms). Only works if the token is readable (not HttpOnly).
 async function getExpiry(): Promise<number | null> {
   const token = await getAuthCookie();
-  console.log(token);
+  //console.log(token);
   if (!token) return null;
   try {
     const payload = JSON.parse(atob(String(token).split(".")[1]));

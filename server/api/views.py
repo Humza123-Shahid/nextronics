@@ -193,6 +193,7 @@ class WarehouseViewSet(viewsets.ModelViewSet):
 class CartViewSet(viewsets.ModelViewSet):
     queryset = Cart.objects.all()
     serializer_class = CartSerializer
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     authentication_classes = [JWTAuthentication] # Sessions are handled manually now
     permission_classes = [permissions.AllowAny]
     pagination_class = None
@@ -202,10 +203,14 @@ class CartViewSet(viewsets.ModelViewSet):
         # Django converts 'X-Guest-Session-Key' to 'HTTP_X_GUEST_SESSION_KEY'
         return self.request.META.get('HTTP_X_GUEST_SESSION_KEY')
 
+    def _is_admin_panel(self):
+        """Helper to detect if request originated from the Admin Panel"""
+        return self.request.META.get('HTTP_X_CLIENT_TYPE') == 'admin'
+
     def get_queryset(self):
         user = self.request.user
         
-        if user.is_authenticated and (user.is_staff or user.is_superuser):
+        if user.is_authenticated and (user.is_staff or user.is_superuser) and self._is_admin_panel():
             return Cart.objects.all()
             
         if user.is_authenticated:
@@ -296,6 +301,9 @@ class CartItemViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
     pagination_class = None
 
+    def _is_admin_panel(self):
+        return 'admin/' in self.request.path
+
     def get_queryset(self):
         """
         Filter items so a user/guest can only view/modify items inside their own cart.
@@ -303,7 +311,7 @@ class CartItemViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         # 1. Staff and Superusers see everything
-        if user and (user.is_staff or user.is_superuser):
+        if user and (user.is_staff or user.is_superuser) and self._is_admin_panel():
             return CartItem.objects.all()
         
         # 2. Authenticated users see their user-bound cart

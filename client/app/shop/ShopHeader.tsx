@@ -17,6 +17,7 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import { resolveGadgetHref } from "../lib/gadgetsNav"; // adjust path if needed
 
 type NavItem = { name: string; href: string; badge?: "HOT" | "NEW" };
@@ -82,7 +83,11 @@ function NavBadge({ type }: { type: "HOT" | "NEW" }) {
     </span>
   );
 }
-
+type DropdownItem = {
+  name: string;
+  href?: string;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+};
 /** Small hover dropdown used in the top utility bar */
 function TopDropdown({
   label,
@@ -91,7 +96,7 @@ function TopDropdown({
 }: {
   label: string;
   icon?: React.ReactNode;
-  items: { name: string; href: string }[];
+  items: DropdownItem[];
 }) {
   return (
     <li className="relative group">
@@ -104,16 +109,29 @@ function TopDropdown({
         <ChevronDown className="w-3 h-3" />
       </button>
       <ul className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition absolute right-0 top-full min-w-[130px] bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-b-lg shadow-xl z-50 py-1">
-        {items.map((i) => (
-          <li key={i.name}>
-            <Link
-              href={i.href}
-              className="block px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-cyan-400"
+        {items.map((item, index) => {
+          if (item.onClick) {
+            return (
+              <button
+                key={index}
+                onClick={item.onClick}
+                className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                {item.name}
+              </button>
+            );
+          }
+
+          return (
+            <a
+              key={index}
+              href={item.href}
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
-              {i.name}
-            </Link>
-          </li>
-        ))}
+              {item.name}
+            </a>
+          );
+        })}
       </ul>
     </li>
   );
@@ -136,7 +154,27 @@ function Logo() {
 
 export default function ShopHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
+  const handleSignOut = (e: React.MouseEvent) => {
+    e.preventDefault();
+    logout(); // Your sign-out logic h    ere
+  };
+  const dropdownItems = !isAuthenticated
+    ? [
+      { name: "Sign In", href: "/signin" },
+      { name: "Sign Up", href: "/signup" },
+    ]
+    : isAdmin
+      ? [
+        { name: "Admin Dashboard", href: "/admin" },
+        { name: "Browse Shop", href: "/shop" },
+        { name: "Sign Out", onClick: handleSignOut },
+      ]
+      : [
+        { name: "Browse Shop", href: "/shop" },
+        { name: "Sign Out", onClick: handleSignOut },
+      ];
   const fetchCart = async () => {
 
     const token = await getAuthCookie();
@@ -305,12 +343,9 @@ export default function ShopHeader() {
               ]}
             />
             <TopDropdown
-              label="My Account"
+              label={isAuthenticated ? `Hello, ${user?.first_name || 'Account'}` : "My Account"}
               icon={<User className="w-3.5 h-3.5" />}
-              items={[
-                { name: "Sign In", href: "/signin" },
-                { name: "Sign Up", href: "/signup" },
-              ]}
+              items={dropdownItems}
             />
           </ul>
         </div>

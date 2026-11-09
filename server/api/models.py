@@ -24,10 +24,10 @@ class Address(models.Model):
     """A user can have multiple shipping/billing addresses."""
     ADDRESS_TYPE_CHOICES = [('shipping', 'Shipping'), ('billing', 'Billing')]
  
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses',null=True)
     address_type = models.CharField(max_length=10, choices=ADDRESS_TYPE_CHOICES)
     full_name = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=20,null=True)
     address_line1 = models.CharField(max_length=255)
     address_line2 = models.CharField(max_length=255, blank=True)
     city = models.CharField(max_length=100)
@@ -156,15 +156,22 @@ class Order(models.Model):
         ('cancelled', 'Cancelled'), ('refunded', 'Refunded'),
     ]
     PAYMENT_STATUS_CHOICES = [('unpaid', 'Unpaid'), ('paid', 'Paid'), ('failed', 'Failed'), ('refunded', 'Refunded')]
- 
+    PAYMENT_METHOD_CHOICES = [
+        ('cod', 'Cash on Delivery'),
+        ('stripe', 'Credit/Debit Card (Stripe)'),
+        ('bank_transfer', 'Direct Bank Transfer'),
+    ]
     # order_number = models.CharField(max_length=32, unique=True, default=uuid.uuid4().hex[:12])
     order_number = models.CharField(
         max_length=32, 
         unique=True, 
         default=generate_order_number  # Pass the function itself, NO parentheses ()
     )
-    order_number = models.CharField(max_length=12, unique=True, default=generate_order_number)
+    #order_number = models.CharField(max_length=12, unique=True, default=generate_order_number)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='orders')
+    email = models.EmailField(max_length=255, null=True) # Captures guest or account email directly
+    phone = models.CharField(max_length=20, null=True)
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='cod')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
     shipping_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, related_name='shipping_orders')

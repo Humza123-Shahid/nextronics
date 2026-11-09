@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import User, Address, Category, Brand, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
+from django.db.models import F
+from django.db import transaction
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -184,11 +186,125 @@ class CartSerializer(serializers.ModelSerializer):
         )
 
 
+# class OrderSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Order
+#         fields = '__all__'
+
+    
+#     def _is_admin_panel(self):
+#         """Helper to detect if request originated from the Admin Panel"""
+#         return self.request.META.get('HTTP_X_CLIENT_TYPE') == 'admin'
+
+#     def create(self, validated_data):
+#         # 1. Correctly pull the request from the serializer context
+#         request = self.context.get('request')
+#         if not request:
+#             raise ValueError("Serializer context is missing the request object.")
+
+#         # Fetch the user's cart (Make sure to handle unauthenticated/guest carts if needed)
+#         #cart = Cart.objects.get(user=request.user)
+#         if self.request.user and self.request.user.is_authenticated:
+#             cart = Cart.objects.get(user=self.request.user)
+#         else:
+#             guest_session_key = self.request.headers.get('X-Guest-Session-Key')
+#             cart = Cart.objects.get(session_key=guest_session_key)
+
+#         with transaction.atomic():
+#             # 2. Create the Order instance
+#             order = Order.objects.create(**validated_data)
+            
+#             if not self._is_admin_panel():
+#                 # 3. Loop through cart items, create OrderItems, and decrement Product stock
+#                 for cart_item in cart.items.all():
+#                     variant = cart_item.product_variant_detail
+#                     product = variant.product_detail
+                    
+#                     unit_price = variant.price_override if variant.price_override is not None else product.price
+#                     item_subtotal = unit_price * cart_item.quantity
+
+#                     # Create OrderItem snapshot
+#                     OrderItem.objects.create(
+#                         order=order,
+#                         product=product,
+#                         product_variant=variant,
+#                         product_name_snapshot=product.name,
+#                         sku_snapshot=variant.sku,
+#                         unit_price=unit_price,
+#                         quantity=cart_item.quantity,
+#                         subtotal=item_subtotal
+#                     )
+
+#                     # 4. Decrement stock_quantity ONLY in the Product table
+#                     Product.objects.filter(id=product.id).update(
+#                         stock_quantity=F('stock_quantity') - cart_item.quantity
+#                     )
+
+#                 # 5. Clear the user's cart items after successful checkout
+#                 cart.items.all().delete()
+
+#             # CRITICAL: Always return the created instance in DRF create() methods
+#             return order
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
 
+    def _is_admin_panel(self, request):
+        """Helper to detect if request originated from the Admin Panel"""
+        # Pull META safely from the passed request object
+        return request.META.get('HTTP_X_CLIENT_TYPE') == 'admin' if request else False
+
+    def create(self, validated_data):
+        # 1. Correctly pull the request from the serializer context
+        request = self.context.get('request')
+        if not request:
+            raise ValueError("Serializer context is missing the request object.")
+
+        # 2. Use the local variable 'request' (NOT self.request)
+        if request.user and request.user.is_authenticated:
+            cart = Cart.objects.get(user=request.user)
+        else:
+            # Note: For DRF requests, headers are usually accessed via request.META or request.headers (Django 2.2+)
+            guest_session_key = request.headers.get('X-Guest-Session-Key')
+            cart = Cart.objects.get(session_key=guest_session_key)
+
+        with transaction.atomic():
+            # 3. Create the Order instance
+            order = Order.objects.create(**validated_data)
+            
+            # Pass the local request variable into the helper function
+            if not self._is_admin_panel(request):
+                # 4. Loop through cart items, create OrderItems, and decrement Product stock
+                for cart_item in cart.items.all():
+                    # variant = cart_item.product_variant_detail
+                    # product = variant.product_detail
+                    variant = cart_item.product_variant
+                    product = variant.product
+                    unit_price = variant.price_override if variant.price_override is not None else product.price
+                    item_subtotal = unit_price * cart_item.quantity
+
+                    # Create OrderItem snapshot
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        product_variant=variant,
+                        product_name_snapshot=product.name,
+                        sku_snapshot=variant.sku,
+                        unit_price=unit_price,
+                        quantity=cart_item.quantity,
+                        subtotal=item_subtotal
+                    )
+
+                    # 5. Decrement stock_quantity ONLY in the Product table
+                    Product.objects.filter(id=product.id).update(
+                        stock_quantity=F('stock_quantity') - cart_item.quantity
+                    )
+
+                # 6. Clear the user's cart items after successful checkout
+                cart.items.all().delete()
+
+            return order
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem

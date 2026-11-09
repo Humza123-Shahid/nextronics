@@ -30,8 +30,21 @@ class AddressViewSet(viewsets.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdminUserCustom]
+    #permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
+
+    def get_permissions(self):
+            """
+            Instantiates and returns the list of permissions that this view requires.
+            """
+            # If the request is a read action (list or retrieve), make it public (AllowAny)
+            if self.action in ['create']:
+                permission_classes = [AllowAny]
+            else:
+                # Otherwise, enforce your custom admin/staff check
+                permission_classes = [IsAuthenticated, IsAdminUserCustom]
+            
+            return [permission() for permission in permission_classes]
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -381,8 +394,21 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdminUserCustom]
+    #permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        # If the request is a read action (list or retrieve), make it public (AllowAny)
+        if self.action in ['create']:
+            permission_classes = [AllowAny]
+        else:
+            # Otherwise, enforce your custom admin/staff check
+            permission_classes = [IsAuthenticated, IsAdminUserCustom]
+        
+        return [permission() for permission in permission_classes]
 
 class OrderItemViewSet(viewsets.ModelViewSet):
     queryset = OrderItem.objects.all()

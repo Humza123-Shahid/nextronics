@@ -477,7 +477,7 @@ export function VisitorsDeviceChart() {
   const desktop = devices.filter((d) => d.name == "Desktop")[0];
   const mobile = devices.filter((d) => d.name == "Mobile")[0];
   const tablet = devices.filter((d) => d.name == "Tablet")[0];
-
+  console.log(desktop, mobile, tablet);
   // const devices = [
   //   { name: "Desktop", share: 58, color: "#3C50E0" },
   //   { name: "Mobile", share: 34, color: "#06B6D4" },
@@ -523,42 +523,45 @@ export function VisitorsDeviceChart() {
               stroke="#1C2434"
               strokeWidth="12"
             />
-
-            <circle
-              cx="50"
-              cy="50"
-              r="38"
-              fill="transparent"
-              stroke="#3C50E0"
-              strokeWidth="12"
-              strokeDasharray={`${desktop?.share * 2.387} ${100 * 2.387}`}
-              strokeDashoffset="0"
-              strokeLinecap="butt"
-            />
-
-            <circle
-              cx="50"
-              cy="50"
-              r="38"
-              fill="transparent"
-              stroke="#06B6D4"
-              strokeWidth="12"
-              strokeDasharray={`${mobile?.share * 2.387} ${100 * 2.387}`}
-              strokeDashoffset={`-${desktop?.share * 2.387}`}
-              strokeLinecap="butt"
-            />
-
-            <circle
-              cx="50"
-              cy="50"
-              r="38"
-              fill="transparent"
-              stroke="#10B981"
-              strokeWidth="12"
-              strokeDasharray={`${tablet?.share * 2.387} ${100 * 2.387}`}
-              strokeDashoffset={`-${(desktop?.share + mobile?.share) * 2.387}`}
-              strokeLinecap="butt"
-            />
+            {desktop?.share > 0 && (
+              <circle
+                cx="50"
+                cy="50"
+                r="38"
+                fill="transparent"
+                stroke="#3C50E0"
+                strokeWidth="12"
+                strokeDasharray={`${desktop?.share * 2.387} ${100 * 2.387}`}
+                strokeDashoffset="0"
+                strokeLinecap="butt"
+              />
+            )}
+            {mobile?.share > 0 && desktop?.share < 100 && (
+              <circle
+                cx="50"
+                cy="50"
+                r="38"
+                fill="transparent"
+                stroke="#06B6D4"
+                strokeWidth="12"
+                strokeDasharray={`${mobile?.share * 2.387} ${100 * 2.387}`}
+                strokeDashoffset={`-${desktop?.share * 2.387}`}
+                strokeLinecap="butt"
+              />
+            )}
+            {tablet?.share > 0 && (desktop?.share + mobile?.share) < 100 && (
+              <circle
+                cx="50"
+                cy="50"
+                r="38"
+                fill="transparent"
+                stroke="#10B981"
+                strokeWidth="12"
+                strokeDasharray={`${tablet?.share * 2.387} ${100 * 2.387}`}
+                strokeDashoffset={`-${(desktop?.share + mobile?.share) * 2.387}`}
+                strokeLinecap="butt"
+              />
+            )}
           </svg>
 
           <div className="absolute flex flex-col items-center">

@@ -582,17 +582,52 @@ export default function GadgetsSection() {
     //     return () => clearTimeout(t);
     // }, [products]);
     // Cross-page navigation (ShopHeader.tsx on /shop landing on "/#on-sale" etc.)
+    // useEffect(() => {
+    //     const tab = getGadgetTabFromHash();
+    //     if (!tab) return;
+    //     setActiveTab(tab);
+    //     // small delay so layout/fonts/images settle before we scroll
+    //     const t = setTimeout(() => {
+    //         document.getElementById("gadgets")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    //     }, 150);
+    //     return () => clearTimeout(t);
+    // }, []);
     useEffect(() => {
         const tab = getGadgetTabFromHash();
         if (!tab) return;
         setActiveTab(tab);
-        // small delay so layout/fonts/images settle before we scroll
-        const t = setTimeout(() => {
-            document.getElementById("gadgets")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 150);
-        return () => clearTimeout(t);
-    }, []);
 
+        const el = document.getElementById("gadgets");
+        if (!el) return;
+
+        let cancelled = false;
+        const align = () => {
+            if (cancelled) return;
+            // instant, not smooth: a smooth scroll gets overtaken by layout shifts
+            el.scrollIntoView({ behavior: "auto", block: "start" });
+        };
+
+        // re-align every time the page height changes (category data loading in)
+        const ro = new ResizeObserver(align);
+        ro.observe(document.body);
+        align();
+
+        // stop once the page has had time to settle, or as soon as the user scrolls
+        const stop = () => { cancelled = true; ro.disconnect(); };
+        const timer = setTimeout(() => {
+            stop();
+            window.history.replaceState(null, "", window.location.pathname);
+        }, 2000);
+        window.addEventListener("wheel", stop, { once: true, passive: true });
+        window.addEventListener("touchmove", stop, { once: true, passive: true });
+
+        return () => {
+            stop();
+            clearTimeout(timer);
+            window.removeEventListener("wheel", stop);
+            window.removeEventListener("touchmove", stop);
+        };
+    }, []);
     return (
 
 

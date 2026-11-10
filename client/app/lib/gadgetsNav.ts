@@ -22,11 +22,16 @@ export function goToGadgets(tab: GadgetTabId) {
 /** Cross-page navigation: reads the tab out of the URL hash, e.g. after
  *  landing on "/#on-sale" coming from /shop. GadgetsSection calls this once
  *  on mount. */
+// export function getGadgetTabFromHash(): GadgetTabId | null {
+//     if (typeof window === "undefined") return null;
+//     return GADGET_TAB_MAP[window.location.hash] ?? null;
+// }
 export function getGadgetTabFromHash(): GadgetTabId | null {
     if (typeof window === "undefined") return null;
+    const q = new URLSearchParams(window.location.search).get("gadgetTab");
+    if (q === "popular" || q === "new" || q === "sale") return q;
     return GADGET_TAB_MAP[window.location.hash] ?? null;
 }
-
 /** For pages where GadgetsSection is NOT mounted (e.g. /shop): if href maps
  *  to a gadget tab, route to the home page with that hash; otherwise leave
  *  the href untouched. */

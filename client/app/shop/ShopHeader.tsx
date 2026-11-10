@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAuthCookie } from "@/app/actions/auth";
 import { AnimatePresence, motion } from "framer-motion";
+import { usePathname, useRouter } from "next/navigation";
+import { GADGET_TAB_MAP, goToGadgets } from "../lib/gadgetsNav";
 import {
   Cpu,
   Headset,
@@ -175,6 +177,27 @@ export default function ShopHeader() {
         { name: "Browse Shop", href: "/shop" },
         { name: "Sign Out", onClick: handleSignOut },
       ];
+  const pathname = usePathname();
+  const router = useRouter();
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const cleanHref = href.startsWith("/") ? href.replace("/", "") : href;
+    const tab = GADGET_TAB_MAP[href] || GADGET_TAB_MAP[cleanHref];
+
+    if (tab) {
+      // 1. Prevent default browser hash jumping to avoid empty DOM element errors
+      e.preventDefault();
+
+      if (pathname === "/") {
+        // If already on home, switch the tab state directly via your gadget handler
+        goToGadgets(tab);
+      } else {
+        // If on another page (e.g. /shop or /cart), navigate back to root with the hash
+        //router.push(`/?gadgetTab=${tab}`, { scroll: false });
+        router.push(`/#${cleanHref.replace("#", "")}`, { scroll: false });
+      }
+      setMobileOpen(false);
+    }
+  };
   const fetchCart = async () => {
 
     const token = await getAuthCookie();
@@ -273,9 +296,19 @@ export default function ShopHeader() {
               <ul className="p-4 space-y-1 text-sm font-semibold">
                 {NAV.map((n) => (
                   <li key={n.name}>
-                    <Link
+                    {/* <Link
                       href={resolveGadgetHref(n.href)}
                       onClick={() => setMobileOpen(false)}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 ${n.href === "/shop" ? "text-blue-600 dark:text-cyan-400" : ""
+                        }`}
+                    >
+                      <span>{n.name}</span>
+                      {n.badge && <NavBadge type={n.badge} />}
+                    </Link> */}
+                    <Link
+                      //href={n.href.startsWith("#") ? `/${n.href}` : n.href}
+                      href={resolveGadgetHref(n.href)}
+                      onClick={(e) => handleNavClick(e, n.href)}
                       className={`flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 ${n.href === "/shop" ? "text-blue-600 dark:text-cyan-400" : ""
                         }`}
                     >
@@ -362,7 +395,7 @@ export default function ShopHeader() {
                 const active = n.href === "/shop";
                 return (
                   <li key={n.name}>
-                    <Link
+                    {/* <Link
                       href={resolveGadgetHref(n.href)}
                       aria-current={active ? "page" : undefined}
                       className={`py-2 flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${active
@@ -372,8 +405,21 @@ export default function ShopHeader() {
                     >
                       <span>{n.name}</span>
                       {n.badge && <NavBadge type={n.badge} />}
+                    </Link> */}
+                    <Link
+                      //href={n.href.startsWith("#") ? `/${n.href}` : n.href}
+                      href={resolveGadgetHref(n.href)}
+                      onClick={(e) => handleNavClick(e, n.href)}
+                      className={`py-2 flex items-center gap-1.5 whitespace-nowrap border-b-2 transition-colors ${active
+                        ? "text-blue-600 dark:text-cyan-400 border-blue-600 dark:border-cyan-400"
+                        : "border-transparent text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400"
+                        }`}
+                    >
+                      <span>{n.name}</span>
+                      {n.badge && <NavBadge type={n.badge} />}
                     </Link>
                   </li>
+
                 );
               })}
             </ul>

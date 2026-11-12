@@ -292,8 +292,51 @@ export default function CartPage() {
     // };
     const handlePlaceOrder = async (e: React.FormEvent) => {
         e.preventDefault();
+
         setSubmittingOrder(true);
 
+        const token = await getAuthCookie();
+        const guestSessionKey = localStorage.getItem('guest_session_key');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+        if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+            headers['Authorization'] = `Bearer ${token}`;
+        } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+            headers['X-Guest-Session-Key'] = guestSessionKey;
+        }
+
+        // 1. Fetch fresh cart items from the backend to get live stock_quantity
+        const cartRes = await fetch('http://127.0.0.1:8080/api/carts/', { // <-- Replace with your actual cart endpoint
+            method: 'GET',
+            headers: headers,
+            //cache: 'no-store', // Prevent browser from returning cached data
+        });
+
+        if (!cartRes.ok) {
+            throw new Error('Failed to verify current stock.');
+        }
+
+        const freshCart = await cartRes.json();
+        const freshItems = freshCart.items || freshCart; // Adjust based on your API response shape
+
+        // 2. Validate against the fresh stock values
+        for (const item of freshItems) {
+            const product = item.product_variant_detail.product_detail;
+            const requestedQty = item.quantity;
+            const availableStock = product.stock_quantity ?? 0;
+
+            if (availableStock <= 0) {
+                alert(`Sorry, "${product.name}" is currently out of stock.`);
+                setSubmittingOrder(false);
+                return;
+            }
+
+            if (requestedQty > availableStock) {
+                alert(`Cannot place order. You have ${requestedQty} units of "${product.name}" in your cart, but only ${availableStock} are available in stock.`);
+                setSubmittingOrder(false);
+                return;
+            }
+        }
         try {
             const token = await getAuthCookie();
             const guestSessionKey = localStorage.getItem('guest_session_key');
@@ -382,7 +425,7 @@ export default function CartPage() {
 
             // Clear cart / redirect user to confirmation page
             window.location.href = `/order-confirmation?order_number=${orderResult.order_number}`;
-
+            setCart(null);
         } catch (err: any) {
             // This alert will now catch and print the exact key validation error from Django!
             alert(err.message || 'An error occurred during checkout.');

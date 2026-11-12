@@ -165,15 +165,18 @@ export default function OrderHeader() {
         ? [
             { name: "Sign In", href: "/signin" },
             { name: "Sign Up", href: "/signup" },
+            { name: "Order History", href: "/order-history" },
         ]
         : isAdmin
             ? [
                 { name: "Admin Dashboard", href: "/admin" },
                 { name: "Browse Shop", href: "/shop" },
+                { name: "Order History", href: "/order-history" },
                 { name: "Sign Out", onClick: handleSignOut },
             ]
             : [
                 { name: "Browse Shop", href: "/shop" },
+                { name: "Order History", href: "/order-history" },
                 { name: "Sign Out", onClick: handleSignOut },
             ];
     const fetchCart = async () => {

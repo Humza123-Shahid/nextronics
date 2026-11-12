@@ -23,9 +23,9 @@ export interface OrderAddress {
 
 export interface OrderItem {
     id: number;
-    product_name: string;
-    sku: string;
-    price: number;
+    product_name_snapshot: string;
+    sku_snapshot: string;
+    unit_price: number;
     quantity: number;
     image?: string;
 }
@@ -99,7 +99,10 @@ function OrderConfirmationContent() {
 
         fetchOrderDetails();
     }, [orderNumber]);
+    useEffect(() => {
+        console.log(order);
 
+    }, [order]);
     // Loading State
     if (loading) {
         return (
@@ -168,7 +171,7 @@ function OrderConfirmationContent() {
                                             {item.image ? (
                                                 <img
                                                     src={item.image}
-                                                    alt={item.product_name}
+                                                    alt={item.product_name_snapshot}
                                                     className="w-14 h-14 object-cover rounded-lg bg-gray-100"
                                                 />
                                             ) : (
@@ -177,12 +180,12 @@ function OrderConfirmationContent() {
                                                 </div>
                                             )}
                                             <div>
-                                                <p className="text-sm font-semibold text-gray-900">{item.product_name}</p>
+                                                <p className="text-sm font-semibold text-gray-900">{item.product_name_snapshot}</p>
                                                 <p className="text-xs text-gray-500 font-mono">Qty: {item.quantity}</p>
                                             </div>
                                         </div>
                                         <div className="text-sm font-bold text-gray-900">
-                                            ${(Number(item.price) * item.quantity).toFixed(2)}
+                                            ${(Number(item.unit_price) * item.quantity).toFixed(2)}
                                         </div>
                                     </li>
                                 ))}

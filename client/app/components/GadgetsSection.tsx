@@ -230,6 +230,7 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
         window.dispatchEvent(new Event("cartUpdated"));
     };
     const handleAddToCart = async (productVariantId: number, quantity: number = 1) => {
+
         try {
             const sessionKey = localStorage.getItem('guest_session_key') || '';
             const token = await getAuthCookie();
@@ -282,6 +283,10 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
             alert(error.message || 'Something went wrong');
         }
     }
+    // 1. Determine the active/default variant and check its stock quantity
+    const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+    const stockQuantity = ((product as any).stock_quantity ?? 0);
+    const isInStock = stockQuantity > 0;
     return (
         <motion.article
             custom={index}
@@ -363,19 +368,39 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
                     className={styles.addToCart}
                     //onClick={handleAddToCart}
                     onClick={(e) => {
+                        // if (isAdded) {
+                        //     return
+                        // }
                         e.preventDefault();  // Prevents the <a> link from navigating
                         e.stopPropagation(); // Prevents bubbling up to the parent card link
+                        // 2. Stock validation check before proceeding
+                        if (!isInStock) {
+                            alert("Sorry, this item is currently out of stock.");
+                            return;
+                        }
 
                         // Grab the first active variant's ID, or fallback to product ID if no variants exist
-                        const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+                        //const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
                         const productVariantId = defaultVariant ? defaultVariant.id : product.id;
 
                         handleAddToCart(Number(productVariantId), 1);
+                        //setIsAdded(true);
                     }}
                 //disabled={isAdded}
                 >
                     <AnimatePresence mode="wait" initial={false}>
-                        {isAdded ? (
+                        {!isInStock ? (
+                            <motion.span
+                                key="out-of-stock"
+                                className={styles.addToCartInner}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.18 }}
+                            >
+                                Out of Stock
+                            </motion.span>
+                        ) : isAdded ? (
                             <motion.span
                                 key="added"
                                 className={styles.addToCartInner}

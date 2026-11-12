@@ -248,6 +248,9 @@ function ProductCard({
       alert(error.message || 'Something went wrong');
     }
   }
+  const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+  const stockQuantity = ((product as any).stock_quantity ?? 0);
+  const isInStock = stockQuantity > 0;
   return (
     <motion.article
       className={styles.card}
@@ -283,9 +286,12 @@ function ProductCard({
               onClick={(e) => {
                 e.preventDefault();  // Prevents the <a> link from navigating
                 e.stopPropagation(); // Prevents bubbling up to the parent card link
-
+                if (!isInStock) {
+                  alert("Sorry, this item is currently out of stock.");
+                  return;
+                }
                 // Grab the first active variant's ID, or fallback to product ID if no variants exist
-                const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+                //const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
                 //console.log(product);
                 const productVariantId = defaultVariant ? defaultVariant.id : product.id;
                 //console.log(productVariantId);

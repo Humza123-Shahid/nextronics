@@ -387,6 +387,9 @@ export default function ShopSection() {
                     ) : (
                         <ul className="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-3 gap-5">
                             {visible.map((p) => {
+                                const defaultVariant = p.variants?.find(v => v.is_active) || p.variants?.[0];
+                                const stockQuantity = ((p as any).stock_quantity ?? 0);
+                                const isInStock = stockQuantity > 0;
                                 // const Icon = p.icon;
                                 const wished = wishlist.includes(p.id);
                                 const productCategoryName = categoryMap.get(p.category) || "Uncategorized";
@@ -480,9 +483,12 @@ export default function ShopSection() {
                                                     onClick={(e) => {
                                                         e.preventDefault();  // Prevents the <a> link from navigating
                                                         e.stopPropagation(); // Prevents bubbling up to the parent card link
-
+                                                        if (!isInStock) {
+                                                            alert("Sorry, this item is currently out of stock.");
+                                                            return;
+                                                        }
                                                         // Grab the first active variant's ID, or fallback to product ID if no variants exist
-                                                        const defaultVariant = p.variants?.find(v => v.is_active) || p.variants?.[0];
+                                                        //const defaultVariant = p.variants?.find(v => v.is_active) || p.variants?.[0];
                                                         const productVariantId = defaultVariant ? defaultVariant.id : p.id;
 
                                                         handleAddToCart(productVariantId, 1);

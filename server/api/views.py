@@ -1,6 +1,7 @@
 import re
 from django.db.models import Q, F
 from rest_framework.generics import ListAPIView
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdminUserCustom
@@ -391,18 +392,49 @@ class AddToCartView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.all()
+    # queryset = Order.objects.all()
+    queryset = Order.objects.all().select_related('shipping_address', 'billing_address')
     serializer_class = OrderSerializer
     authentication_classes = [JWTAuthentication]
     #permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
+
+    def get_object(self):
+        """
+        Safely looks up an order by either its primary key (id) 
+        or its human-readable order number without causing type crashes.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs[lookup_url_kwarg]
+
+        # --- CASE A: Your Model's ID is an Integer ---
+        # Only query the ID field if the incoming string is completely numeric
+        if lookup_value.isdigit():
+            filter_kwargs = Q(id=int(lookup_value)) | Q(order_number=lookup_value)
+        else:
+            # If it contains letters, it's strictly an order number lookup
+            filter_kwargs = Q(order_number=lookup_value)
+
+        # --- CASE B: Alternative (Uncomment below instead if your Model ID is a UUID) ---
+        # try:
+        #     # Test if lookup_value is a valid UUID format
+        #     uuid.UUID(str(lookup_value))
+        #     filter_kwargs = Q(id=lookup_value) | Q(order_number=lookup_value)
+        # except ValueError:
+        #     # Not a valid UUID format, so treat it strictly as an order number string
+        #     filter_kwargs = Q(order_number=lookup_value)
+
+        obj = get_object_or_404(queryset, filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def get_permissions(self):
         """
         Instantiates and returns the list of permissions that this view requires.
         """
         # If the request is a read action (list or retrieve), make it public (AllowAny)
-        if self.action in ['create']:
+        if self.action in ['list', 'retrieve','create']:
             permission_classes = [AllowAny]
         else:
             # Otherwise, enforce your custom admin/staff check

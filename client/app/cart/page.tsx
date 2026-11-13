@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAuthCookie } from "@/app/actions/auth";
+import nodemailer from 'nodemailer';
+import { renderToStaticMarkup } from 'react-dom/server';
 import Image from 'next/image';
 import CartHeader from "./CartHeader";
 import Footer from "../components/Footer";
@@ -317,8 +319,9 @@ export default function CartPage() {
         }
 
         const freshCart = await cartRes.json();
-        const freshItems = freshCart.items || freshCart; // Adjust based on your API response shape
-
+        //const freshItems = freshCart.items || freshCart; // Adjust based on your API response shape
+        const activeCart = Array.isArray(freshCart) ? freshCart[0] : freshCart;
+        const freshItems = activeCart?.items || [];
         // 2. Validate against the fresh stock values
         for (const item of freshItems) {
             const product = item.product_variant_detail.product_detail;
@@ -421,6 +424,201 @@ export default function CartPage() {
             }
 
             const orderResult = await response.json();
+            //try {
+            // Example using Resend API directly from the client side
+            const emailHtmlContent = `
+                    <div style="background-color: #f9fafb; padding: 32px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #111827; line-height: 1.5;">
+                        <div style="max-width: 600px; margin: 0 auto;">
+                            
+                            <!-- Success Header Banner -->
+                            <div style="background-color: #ffffff; border: 1px solid #f3f4f6; border-radius: 16px; padding: 32px 24px; text-align: center; margin-bottom: 24px;">
+                                <div style="width: 56px; height: 56px; background-color: #dcfce7; color: #16a34a; border-radius: 50%; margin: 0 auto 16px auto; font-size: 28px; line-height: 56px; font-weight: bold;">
+                                    &#10003;
+                                </div>
+                                <h1 style="font-size: 24px; font-weight: 800; color: #111827; margin: 0 0 8px 0;">
+                                    Thank You for Your Order!
+                                </h1>
+                                <p style="font-size: 14px; color: #4b5563; margin: 0 0 20px 0;">
+                                    Your order has been placed successfully. We are preparing your items for shipment.
+                                </p>
+                                <div style="display: inline-block; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 16px; font-size: 14px; color: #374151;">
+                                    <span>Order Number: </span>
+                                    <strong style="font-family: 'Courier New', Courier, monospace; color: #000000;">${orderResult.order_number}</strong>
+                                </div>
+                            </div>
+
+                            <!-- Order Items Card -->
+                            <div style="background-color: #ffffff; border: 1px solid #f3f4f6; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+                                <h2 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 16px 0; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;">
+                                    Order Items
+                                </h2>
+                                
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tbody>
+                                                                    
+                                        ${items.map(item => {
+
+                const variant = item.product_variant_detail;
+                const product = variant.product_detail;
+                console.log(product)
+                const unitPrice = variant.price_override ?? product.price;
+                const imageUrl = product.image || variant.image || '/placeholder.png';
+                // const rawImage = product.image || variant.image;
+                // const imageUrl = rawImage
+                //     ? rawImage.startsWith('http')
+                //         ? rawImage
+                //         : `http://127.0.0.1:8080${rawImage}`
+                //     : null;
+                const isUpdating = updatingId === item.id;
+                // const product = item.product_variant_detail.product_detail;
+                // const unitPrice = Number(item.product_variant_detail.price_override ?? product.price ?? 0);
+                const lineTotal = (unitPrice * item.quantity).toFixed(2);
+                const iconHtml = renderToStaticMarkup(<ShoppingBag className="w-6 h-6" />);
+                // const imageUrl = item.product_variant_detail.image || product.image;
+
+                return `
+                                                                                                <tr>
+                                                                                                    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; vertical-align: middle; width: 64px;">
+                                                                                                        <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                                                                                                                                                            <${iconHtml}  />
+                                                                                                                                                        </div>
+                                                                                                    </td>
+                                                                                                    <td style="padding: 12px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle;">
+                                                                                                        <p style="font-size: 14px; font-weight: 600; color: #111827; margin: 0 0 2px 0;">
+                                                                                                            ${product.name}
+                                                                                                        </p>
+                                                                                                        ${item.product_variant_detail.sku
+                        ? `<p style="font-size: 12px; color: #6b7280; margin: 0 0 2px 0;">${item.product_variant_detail.sku}</p>`
+                        : ''
+                    }
+                                                                                                        <p style="font-size: 12px; color: #6b7280; font-family: 'Courier New', Courier, monospace; margin: 0;">
+                                                                                                            Qty: ${item.quantity}
+                                                                                                        </p>
+                                                                                                    </td>
+                                                                                                    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; vertical-align: middle; text-align: right; font-size: 14px; font-weight: 700; color: #111827;">
+                                                                                                        $${lineTotal}
+                                                                                                    </td>
+                                                                                                </tr>
+                                                                                            `;
+            }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Payment Summary Card -->
+                            <div style="background-color: #ffffff; border: 1px solid #f3f4f6; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+                                <h2 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 16px 0; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;">
+                                    Payment Summary
+                                </h2>
+                                
+                                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                                    <tr>
+                                        <td style="padding: 6px 0; color: #4b5563;">Subtotal</td>
+                                        <td style="padding: 6px 0; text-align: right; font-weight: 500; color: #111827;">$${subtotal.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 6px 0; color: #4b5563;">Shipping Fee</td>
+                                        <td style="padding: 6px 0; text-align: right; font-weight: 500; color: #111827;">$${shipping.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 14px 0 6px 0; border-top: 1px solid #f3f4f6; font-size: 16px; font-weight: 700; color: #111827;">Grand Total</td>
+                                        <td style="padding: 14px 0 6px 0; border-top: 1px solid #f3f4f6; text-align: right; font-size: 16px; font-weight: 700; color: #111827;">$${total.toFixed(2)}</td>
+                                    </tr>
+                                </table>
+
+                                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #f3f4f6; font-size: 14px; color: #374151;">
+                                    <span style="font-weight: 500;">Payment Method: </span>
+                                    <span style="display: inline-block; background-color: #f3f4f6; color: #111827; font-size: 12px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 6px;">
+                                        ${paymentMethod.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Shipping Address Card -->
+                            <div style="background-color: #ffffff; border: 1px solid #f3f4f6; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+                                <h2 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 16px 0;">
+                                    Delivery Details
+                                </h2>
+                                <div style="background-color: #f9fafb; border: 1px solid #f3f4f6; border-radius: 12px; padding: 16px; font-size: 14px;">
+                                    <p style="font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">
+                                        Shipping Address
+                                    </p>
+                                    ${shippingAddress.full_name ? `<p style="font-weight: 700; color: #111827; margin: 0 0 4px 0;">${shippingAddress.full_name}</p>` : ''}
+                                    <p style="color: #4b5563; margin: 0;">${shippingAddress.address_line1}</p>
+                                    ${shippingAddress.address_line2 ? `<p style="color: #4b5563; margin: 0;">${shippingAddress.address_line2}</p>` : ''}
+                                    <p style="color: #4b5563; margin: 0;">
+                                        ${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.postal_code}
+                                    </p>
+                                    ${shippingAddress.country ? `<p style="color: #4b5563; margin: 0;">${shippingAddress.country}</p>` : ''}
+                                </div>
+                            </div>
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin-bottom: 24px;">
+                                <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}" 
+                                style="display: block; background-color: #000000; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 12px;">
+                                    Continue Shopping
+                                </a>
+                            </div>
+
+                            <!-- Footer -->
+                            <div style="text-align: center; font-size: 12px; color: #9ca3af;">
+                                <p style="margin: 0;">If you have any questions about your order, simply reply to this email.</p>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            // const transporter = nodemailer.createTransport({
+            //     service: "gmail",
+            //     auth: {
+            //         user: "humzashahid2068@gmail.com",
+            //         pass: "waqc dkqq kvrq rbxe", // NOT your regular password
+            //     },
+            // });
+
+            // const mailOptions = {
+            //     from: '"Humza Shahid" <humzashahid2068@gmail.com>',
+            //     to: [email],
+            //     subject: `Order Confirmation #${orderResult.order_number}`,
+            //     html: emailHtmlContent
+            // };
+            await fetch('/api/send-order-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: email,
+                    subject: `Order Confirmation #${orderResult.order_number}`,
+                    html: emailHtmlContent,
+                }),
+            });
+            // `<strong>Hey ${firstName},</strong><br>Thanks for signing up!`
+            // transporter.sendMail(mailOptions, (error, info) => {
+            //     if (error) // {console.log(error);
+            //     {
+            //         console.log(error);
+            //         //return res.status(400).json({ error });
+            //     } else {
+            //         console.log("Email sent: " + info.response);
+            //     }
+            // });
+            // Calling an external email provider API directly from frontend
+            // await fetch('https://api.resend.com/emails', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //         'Authorization': `Bearer your_api_key` // Note: Exposing API keys on frontend has security risks (see note below)
+            //     },
+            //     body: JSON.stringify({
+            //         // from: 'Acme <onboarding@resend.dev>',
+            //         from: 'humzashahid2068@gmail.com',
+            //         to: [email],
+            //         subject: `Order Confirmation #${orderResult.order_number}`,
+            //         html: emailHtmlContent
+            //     })
+            // });
+            // } catch (emailErr) {
+            //     console.error("Failed to send email:", emailErr);
+            // }
             alert(`Order placed successfully! Order Number: ${orderResult.order_number}`);
 
             // Clear cart / redirect user to confirmation page

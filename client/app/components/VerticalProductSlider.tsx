@@ -21,6 +21,7 @@ export interface VerticalProductItem {
   category: string;
   image: string;
   price: number | string;
+  stock_quantity?: number;
   originalPrice?: number | string;
   onSale?: boolean;
   variants?: ProductVariant[];
@@ -461,7 +462,9 @@ export default function VerticalProductSlider({
             {activeProducts?.map((product) => {
               //localStorage.setItem("productID", String(product.id))
               const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+              //console.log(product)
               const stockQuantity = ((product as any).stock_quantity ?? 0);
+              //console.log(stockQuantity)
               const isInStock = stockQuantity > 0;
               const justAdded = addedId === product.id;
               return (

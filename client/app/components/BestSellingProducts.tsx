@@ -249,6 +249,7 @@ function ProductCard({
     }
   }
   const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
+  console.log(product);
   const stockQuantity = ((product as any).stock_quantity ?? 0);
   const isInStock = stockQuantity > 0;
   return (

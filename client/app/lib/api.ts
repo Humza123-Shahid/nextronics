@@ -15,6 +15,7 @@ export type ProductCard = {
     image: string | null;
     price: string;               // DRF returns decimals as strings
     compare_at_price: string | null;
+    stock_quantity: number;
     // discount_percent: number;
     variants?: ProductVariant[];
     rating: string;

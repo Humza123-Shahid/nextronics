@@ -18,6 +18,7 @@ export type VerticalProductItem = {
     price: string;
     originalPrice?: string;
     onSale?: boolean;
+    stock_quantity?: number;
     variants?: ProductVariant[];
     rating: number;
     reviewsCount: number;
@@ -45,6 +46,7 @@ export function toVerticalProductItem(p: ProductCard): VerticalProductItem {
             onSale: true,
         }),
         variants: p.variants,
+        stock_quantity: p.stock_quantity,
         rating: Number(p.rating),
         reviewsCount: p.rating_count,
     };

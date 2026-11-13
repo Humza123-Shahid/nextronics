@@ -169,6 +169,7 @@ class Order(models.Model):
     )
     #order_number = models.CharField(max_length=12, unique=True, default=generate_order_number)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='orders')
+    cart = models.ForeignKey("Cart", on_delete=models.SET_NULL, null=True, blank=True)
     email = models.EmailField(max_length=255, null=True) # Captures guest or account email directly
     phone = models.CharField(max_length=20, null=True)
     payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='cod')

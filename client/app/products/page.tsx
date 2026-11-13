@@ -64,7 +64,7 @@ import { type ProductVariant, type Product, type Category, type Brand } from "..
 // }
 
 // export default async function ProductDetailPage({ params }: { params: { id: string } }) {
-export default function ProductDetailage() {
+export default function ProductDetailPage() {
 
   ////const product = await getProduct(params.id);
   // const productId = localStorage.getItem("productID");

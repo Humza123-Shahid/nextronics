@@ -392,18 +392,51 @@ class AddToCartView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class OrderViewSet(viewsets.ModelViewSet):
-    # queryset = Order.objects.all()
-    queryset = Order.objects.all().select_related('shipping_address', 'billing_address')
+    queryset = Order.objects.all()
+    #queryset = Order.objects.all().select_related('shipping_address', 'billing_address')
     serializer_class = OrderSerializer
     authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.AllowAny]
     #permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
 
+
+    def _is_admin_panel(self):
+        return 'admin/' in self.request.path    
+
+    def get_queryset(self):
+        """
+        Filter items so a user/guest can only view/modify items inside their own cart.
+        """
+        user = self.request.user
+
+        # 1. Staff and Superusers see everything
+        if user and (user.is_staff or user.is_superuser) and self._is_admin_panel():
+            return Order.objects.all().order_by('-placed_at')
+        
+        # 2. Authenticated users see their user-bound cart
+        if user and user.is_authenticated:
+            return Order.objects.filter(user=user).order_by('-placed_at')
+        
+        # 3. Guests see their cart based on a unique session key header or session
+        guest_session_key = self.request.META.get('HTTP_X_GUEST_SESSION_KEY') or self.request.session.get('order_id')
+        if guest_session_key:
+            # Change 'cart__session_key' to match whatever field name holds the string key on your Cart model
+            #return Order.objects.filter(session_key=guest_session_key)
+            return Order.objects.filter(
+                user__isnull=True,
+                cart__session_key=guest_session_key
+            ).order_by("-placed_at")
+            
+        return Order.objects.none()
+    
     def get_object(self):
         """
         Safely looks up an order by either its primary key (id) 
         or its human-readable order number without causing type crashes.
         """
+        
+
         queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup_value = self.kwargs[lookup_url_kwarg]
@@ -428,19 +461,46 @@ class OrderViewSet(viewsets.ModelViewSet):
         obj = get_object_or_404(queryset, filter_kwargs)
         self.check_object_permissions(self.request, obj)
         return obj
-
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        # If the request is a read action (list or retrieve), make it public (AllowAny)
-        if self.action in ['list', 'retrieve','create']:
-            permission_classes = [AllowAny]
-        else:
-            # Otherwise, enforce your custom admin/staff check
-            permission_classes = [IsAuthenticated, IsAdminUserCustom]
         
-        return [permission() for permission in permission_classes]
+
+    # def get_queryset(self):
+    #     user = self.request.user
+    #     qs = Order.objects.select_related('shipping_address', 'billing_address')
+
+    #     # Staff: see everything (drop the path check, or keep it if you need it)
+    #     if self._is_admin_user() and self._is_admin_panel():
+    #         return qs.order_by('-placed_at')
+
+    #     if user and user.is_authenticated:
+    #         return qs.filter(user=user).order_by('-placed_at')
+
+    #     guest_key = (
+    #         self.request.META.get('HTTP_X_GUEST_SESSION_KEY')
+    #         or self.request.session.get('guest_session_key')
+    #     )
+    #     if guest_key:
+    #         return qs.filter(user__isnull=True, cart__session_key=guest_key).order_by('-placed_at')
+
+    #     return qs.none()
+
+    # def get_permissions(self):
+    #     """
+    #     Instantiates and returns the list of permissions that this view requires.
+    #     """
+    #     # If the request is a read action (list or retrieve), make it public (AllowAny)
+    #     if self.action in ['list', 'retrieve','create']:
+    #         permission_classes = [AllowAny]
+    #     else:
+    #         # Otherwise, enforce your custom admin/staff check
+    #         permission_classes = [IsAuthenticated, IsAdminUserCustom]
+        
+    #     return [permission() for permission in permission_classes]
+
+
+
+    
+
+
 
 class OrderItemViewSet(viewsets.ModelViewSet):
     queryset = OrderItem.objects.all()

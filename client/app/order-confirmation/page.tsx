@@ -55,6 +55,12 @@ function OrderConfirmationContent() {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
+    const maskText = (text?: string) => {
+        if (!text) return '';
+        if (text.length <= 3) return '***';
+        return `${text.slice(0, 2)}***${text.slice(-1)}`;
+    };
+
     useEffect(() => {
         if (!orderNumber) {
             setError('No order number was provided.');
@@ -144,7 +150,7 @@ function OrderConfirmationContent() {
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Thank You for Your Order!</h1>
                 <p className="text-gray-600 mt-2 text-sm sm:text-base">
                     Your order has been placed successfully. A confirmation email has been sent to{' '}
-                    <span className="font-semibold text-gray-800">{order.email}</span>.
+                    <span className="font-semibold text-gray-800">{maskText(order.email)}</span>.
                 </p>
 
                 <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-3 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-200/60 text-sm font-medium text-gray-700">
@@ -204,10 +210,10 @@ function OrderConfirmationContent() {
                             {/* Shipping Address */}
                             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Shipping Address</h3>
-                                <p className="font-bold text-gray-900">{order.shipping_address?.full_name}</p>
-                                <p className="text-gray-600 mt-1">{order.shipping_address?.address_line1}</p>
+                                <p className="font-bold text-gray-900">{maskText(order.shipping_address?.full_name)}</p>
+                                <p className="text-gray-600 mt-1">{maskText(order.shipping_address?.address_line1)}</p>
                                 {order.shipping_address?.address_line2 && (
-                                    <p className="text-gray-600">{order.shipping_address.address_line2}</p>
+                                    <p className="text-gray-600">{maskText(order.shipping_address.address_line2)}</p>
                                 )}
                                 <p className="text-gray-600">
                                     {order.shipping_address?.city}, {order.shipping_address?.state} {order.shipping_address?.postal_code}
@@ -218,10 +224,10 @@ function OrderConfirmationContent() {
                             {/* Billing Address */}
                             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billing Address</h3>
-                                <p className="font-bold text-gray-900">{order.billing_address?.full_name}</p>
-                                <p className="text-gray-600 mt-1">{order.billing_address?.address_line1}</p>
+                                <p className="font-bold text-gray-900">{maskText(order.billing_address?.full_name)}</p>
+                                <p className="text-gray-600 mt-1">{maskText(order.billing_address?.address_line1)}</p>
                                 {order.billing_address?.address_line2 && (
-                                    <p className="text-gray-600">{order.billing_address.address_line2}</p>
+                                    <p className="text-gray-600">{maskText(order.billing_address.address_line2)}</p>
                                 )}
                                 <p className="text-gray-600">
                                     {order.billing_address?.city}, {order.billing_address?.state} {order.billing_address?.postal_code}
@@ -264,7 +270,7 @@ function OrderConfirmationContent() {
                             <div className="flex items-center text-sm text-gray-700 space-x-2">
                                 <Truck className="w-4 h-4 text-gray-400" />
                                 <span className="font-medium">Phone:</span>
-                                <span>{order.phone}</span>
+                                <span>{maskText(order.phone)}</span>
                             </div>
                         </div>
 

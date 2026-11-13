@@ -473,15 +473,15 @@ export default function CartPage() {
                 // const product = item.product_variant_detail.product_detail;
                 // const unitPrice = Number(item.product_variant_detail.price_override ?? product.price ?? 0);
                 const lineTotal = (unitPrice * item.quantity).toFixed(2);
-                const iconHtml = renderToStaticMarkup(<ShoppingBag className="w-6 h-6" />);
+                //const iconHtml = renderToStaticMarkup(<ShoppingBag className="w-6 h-6" />);
                 // const imageUrl = item.product_variant_detail.image || product.image;
 
                 return `
                                                                                                 <tr>
                                                                                                     <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; vertical-align: middle; width: 64px;">
-                                                                                                        <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                                                                                                                                                            <${iconHtml}  />
-                                                                                                                                                        </div>
+                                                                                                          <div style="width: 56px; height: 56px; background-color: #f3f4f6; border-radius: 8px; text-align: center; line-height: 56px; font-size: 22px; color: #9ca3af;">
+                                                                                                                &#128717;
+                                                                                                            </div>
                                                                                                     </td>
                                                                                                     <td style="padding: 12px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle;">
                                                                                                         <p style="font-size: 14px; font-weight: 600; color: #111827; margin: 0 0 2px 0;">

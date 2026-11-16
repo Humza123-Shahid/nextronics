@@ -266,6 +266,7 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
+        read_only_fields = ['order_number', 'user', 'cart', 'placed_at', 'updated_at']
 
     def _is_admin_panel(self, request):
         """Helper to detect if request originated from the Admin Panel"""
@@ -305,6 +306,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             # 3. Create the Order instance
+            #user = request.user if request.user.is_authenticated else None
             order = Order.objects.create(**validated_data)
             
             # Pass the local request variable into the helper function

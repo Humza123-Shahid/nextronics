@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from "next/navigation";
+import OrderHistoryHeader from './OrderHistoryHeader';
+import Footer from '../components/Footer';
 import { getAuthCookie } from '@/app/actions/auth';
 import { Package, ChevronRight, Calendar, CreditCard, User } from "lucide-react";
 
@@ -112,27 +114,34 @@ export default function OrderCardList() {
 
     if (orders?.length === 0) {
         return (
+
             <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                <OrderHistoryHeader />
+
                 <Package className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-semibold text-gray-900">No orders found</h3>
                 <p className="mt-1 text-sm text-gray-500">
                     When orders are placed, they will appear here.
                 </p>
+                <Footer />
             </div>
+
+
         );
     }
 
     return (
         <div className="space-y-4">
+            <OrderHistoryHeader />
             {orders?.map((order) => (
                 <div
                     key={order.id}
                     onClick={() => handleCardClick(order)}
-                    className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 cursor-pointer overflow-hidden"
+                    className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 cursor-pointer overflow-hidden max-w-7xl mx-auto"
                 >
                     {/* Card Header: Order Metadata */}
-                    <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex flex-wrap items-center gap-6 text-sm">
+                    <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 ">
+                        <div className="flex flex-wrap items-center gap-6 text-sm ">
                             <div>
                                 <p className="text-gray-500 text-xs uppercase tracking-wider">Order ID</p>
                                 <p className="font-mono font-semibold text-gray-900">
@@ -211,6 +220,7 @@ export default function OrderCardList() {
                     </div>
                 </div>
             ))}
+            <Footer />
         </div>
     );
 }

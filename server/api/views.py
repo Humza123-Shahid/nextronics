@@ -4,8 +4,10 @@ from rest_framework.generics import ListAPIView
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from .permissions import IsAdminUserCustom
 from .permissions import IsAdminUserStrict
+from django.db.models import Q
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -404,31 +406,69 @@ class OrderViewSet(viewsets.ModelViewSet):
     def _is_admin_panel(self):
         return 'admin/' in self.request.path    
 
-    def get_queryset(self):
-        """
-        Filter items so a user/guest can only view/modify items inside their own cart.
-        """
+   
+    def perform_create(self, serializer):
         user = self.request.user
+        guest_session_key = self.request.META.get('HTTP_X_GUEST_SESSION_KEY')
+        
+        cart = None
+        order_user = None
 
-        # 1. Staff and Superusers see everything
+        # 1. Authenticated User (JWT token provided in Authorization header)
+        if user and user.is_authenticated:
+            order_user = user
+            cart = Cart.objects.filter(user=user).first()
+            if not cart and guest_session_key:
+                cart = Cart.objects.filter(session_key=guest_session_key).first()
+
+        # 2. Guest User (X-Guest-Session-Key header provided)
+        elif guest_session_key:
+            order_user = None
+            cart = Cart.objects.filter(session_key=guest_session_key).first()
+
+        if not cart:
+            raise ValidationError({"detail": "No active cart found for this session or user."})
+
+        # Fallback to account email if logged-in user didn't send one in payload
+        email = serializer.validated_data.get('email') or (order_user.email if order_user else None)
+
+        # serializer.save() merges all validated payload fields with user, cart, and email
+        serializer.save(
+            user=order_user,
+            cart=cart,
+            email=email
+        )
+
+    def get_queryset(self):
+        user = self.request.user
+        #print("user",user)
+        guest_session_key = (
+            self.request.META.get('HTTP_X_GUEST_SESSION_KEY') 
+            or self.request.session.get('order_id')
+        )
+        #print("isauth",user.is_authenticated)
         if user and (user.is_staff or user.is_superuser) and self._is_admin_panel():
             return Order.objects.all().order_by('-placed_at')
-        
-        # 2. Authenticated users see their user-bound cart
+
         if user and user.is_authenticated:
-            return Order.objects.filter(user=user).order_by('-placed_at')
-        
-        # 3. Guests see their cart based on a unique session key header or session
-        guest_session_key = self.request.META.get('HTTP_X_GUEST_SESSION_KEY') or self.request.session.get('order_id')
+            query = Q(user=user)
+            # Also allow viewing an order tied to their active guest session
+            #below code get authenticated user orders alongside guest users orders
+            #then in get_object filter orders by order_number,previously order number alongside user some does not existed
+            # but for guest user all order are returned so order number will match everytime 
+            #comment below 2 lines if to restrict order access to specific user
+            if guest_session_key:
+                query |= Q(user__isnull=True, cart__session_key=guest_session_key)
+            return Order.objects.filter(query).order_by('-placed_at')
+
         if guest_session_key:
-            # Change 'cart__session_key' to match whatever field name holds the string key on your Cart model
-            #return Order.objects.filter(session_key=guest_session_key)
             return Order.objects.filter(
                 user__isnull=True,
                 cart__session_key=guest_session_key
-            ).order_by("-placed_at")
-            
+            ).order_by('-placed_at')
+
         return Order.objects.none()
+
     
     def get_object(self):
         """
@@ -438,6 +478,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         
 
         queryset = self.filter_queryset(self.get_queryset())
+        print(queryset)
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup_value = self.kwargs[lookup_url_kwarg]
 

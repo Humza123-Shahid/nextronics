@@ -199,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+          localStorage.setItem("userID", data.user.id);
           if (tokens?.access) {
             localStorage.setItem("nextronics_access_token", tokens.access);
           }

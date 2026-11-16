@@ -80,7 +80,12 @@ function OrderConfirmationContent() {
 
                 if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
                     headers['Authorization'] = `Bearer ${token}`;
-                } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+                }
+                // } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+                //     headers['X-Guest-Session-Key'] = guestSessionKey;
+                // }
+                //attached guestkey mandatory as if user is null in database for some ordernumber so fetch order accoding to guestkey and use ordernumber on returned records
+                if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
                     headers['X-Guest-Session-Key'] = guestSessionKey;
                 }
 

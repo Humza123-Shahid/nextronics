@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .models import User, Address, Category, Brand, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
-from .serializers import UserSerializer, AddressSerializer, CategorySerializer, BrandSerializer, ProductSerializer, ProductVariantSerializer, AttributeValueSerializer, InventorySerializer, WarehouseSerializer, CartSerializer, CartItemSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer, ShippingMethodSerializer, ShipmentSerializer, NotificationSerializer, TestimonialSerializer, SocialSerializer,PageVisitSerializer
+from .serializers import UserSerializer,OrderDetailSerializer, AddressSerializer, CategorySerializer, BrandSerializer, ProductSerializer, ProductVariantSerializer, AttributeValueSerializer, InventorySerializer, WarehouseSerializer, CartSerializer, CartItemSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer, ShippingMethodSerializer, ShipmentSerializer, NotificationSerializer, TestimonialSerializer, SocialSerializer,PageVisitSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.authentication import SessionAuthentication
@@ -225,7 +225,7 @@ class CartViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        
+        print("usercart:",user)
         if user.is_authenticated and (user.is_staff or user.is_superuser) and self._is_admin_panel():
             return Cart.objects.all()
             
@@ -318,7 +318,9 @@ class CartItemViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def _is_admin_panel(self):
-        return 'admin/' in self.request.path
+        # print("cart",self.request.path )
+        # return 'admin/' in self.request.path
+         return self.request.META.get('HTTP_X_CLIENT_TYPE') == 'admin'
 
     def get_queryset(self):
         """
@@ -404,8 +406,17 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
     def _is_admin_panel(self):
-        return 'admin/' in self.request.path    
+        # print(self.request.path )
+        # return 'admin/' in self.request.path
+         return self.request.META.get('HTTP_X_CLIENT_TYPE') == 'admin'    
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        user = self.request.user
+        ctx['is_admin_panel'] = bool(
+            user and user.is_authenticated and user.is_staff and self._is_admin_panel()
+        )
+        return ctx
    
     def perform_create(self, serializer):
         user = self.request.user
@@ -446,8 +457,10 @@ class OrderViewSet(viewsets.ModelViewSet):
             self.request.META.get('HTTP_X_GUEST_SESSION_KEY') 
             or self.request.session.get('order_id')
         )
-        #print("isauth",user.is_authenticated)
+        print("isauth",user.is_authenticated)
+        print("user:",user)
         if user and (user.is_staff or user.is_superuser) and self._is_admin_panel():
+            
             return Order.objects.all().order_by('-placed_at')
 
         if user and user.is_authenticated:
@@ -549,6 +562,47 @@ class OrderItemViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
+
+class OrderDetailViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderDetailSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.AllowAny]
+    #permission_classes = [IsAuthenticated, IsAdminUserCustom]
+    pagination_class = None
+
+    def _is_admin_panel(self):
+        # return 'admin/' in self.request.path
+        return self.request.META.get('HTTP_X_CLIENT_TYPE') == 'admin'
+    def get_queryset(self):
+        user = self.request.user
+        #print("user",user)
+        guest_session_key = (
+            self.request.META.get('HTTP_X_GUEST_SESSION_KEY') 
+            or self.request.session.get('order_id')
+        )
+        #print("isauth",user.is_authenticated)
+        if user and (user.is_staff or user.is_superuser) and self._is_admin_panel():
+            return Order.objects.all().order_by('-placed_at')
+
+        if user and user.is_authenticated:
+            query = Q(user=user)
+            # Also allow viewing an order tied to their active guest session
+            #below code get authenticated user orders alongside guest users orders
+            #then in get_object filter orders by order_number,previously order number alongside user some does not existed
+            # but for guest user all order are returned so order number will match everytime 
+            #comment below 2 lines if to restrict order access to specific user
+            if guest_session_key:
+                query |= Q(user__isnull=True, cart__session_key=guest_session_key)
+            return Order.objects.filter(query).order_by('-placed_at')
+
+        if guest_session_key:
+            return Order.objects.filter(
+                user__isnull=True,
+                cart__session_key=guest_session_key
+            ).order_by('-placed_at')
+
+        return Order.objects.none()
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()

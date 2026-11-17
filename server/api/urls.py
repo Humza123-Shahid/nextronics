@@ -4,7 +4,7 @@ from .views import (
     UserViewSet, AddressViewSet, CategoryViewSet, BrandViewSet, ProductViewSet,
     ProductVariantViewSet, AttributeValueViewSet, InventoryViewSet, WarehouseViewSet,
     CartViewSet, CartItemViewSet, OrderViewSet, OrderItemViewSet, PaymentViewSet,
-    ShippingMethodViewSet, ShipmentViewSet, NotificationViewSet, TestimonialViewSet,
+    ShippingMethodViewSet, ShipmentViewSet, NotificationViewSet, TestimonialViewSet,OrderDetailViewSet,
     SocialViewSet, PageVisitViewSet, login_view, signup_view,admin_check,SpecialHighlightsView,AddToCartView
 )
 
@@ -20,8 +20,9 @@ router.register(r'inventories', InventoryViewSet)
 router.register(r'warehouses', WarehouseViewSet)
 router.register(r'carts', CartViewSet)
 router.register(r'cart-items', CartItemViewSet)
-router.register(r'orders', OrderViewSet)
+router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'order-items', OrderItemViewSet)
+router.register(r'order-details', OrderDetailViewSet, basename='order-detail')
 router.register(r'payments', PaymentViewSet)
 router.register(r'shipping-methods', ShippingMethodViewSet)
 router.register(r'shipments', ShipmentViewSet)

@@ -90,6 +90,7 @@ export default function OrderCardList() {
         // } else {
         //     router.push(`/orders/${order.id}`);
         // }
+        router.push(`/order-history/${order.id}`);
     };
 
     // Helper for status badge colors

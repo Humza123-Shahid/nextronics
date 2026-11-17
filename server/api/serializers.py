@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Address, Category, Brand, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
+from .models import User, Address, Category, Brand,OrderStatusHistory, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
 from django.db.models import F
 from django.db import transaction
 
@@ -261,6 +261,34 @@ class OrderItemSerializer(serializers.ModelSerializer):
             fields['product_image'] = serializers.ImageField(source="product.image", read_only=True)
         
         return fields
+
+class OrderStatusHistorySerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    class Meta:
+        model = OrderStatusHistory
+        fields = ['id', 'status', 'status_display', 'notes', 'created_at']
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    shipping_address = AddressSerializer(read_only=True)
+    status_history = OrderStatusHistorySerializer(many=True, read_only=True)
+    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    payment_status_display = serializers.CharField(source='get_payment_status_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'order_number', 'status', 'status_display', 
+            'payment_status', 'payment_status_display', 'payment_method', 
+            'payment_method_display', 'subtotal', 'discount_total', 
+            'shipping_total', 'tax_total', 'grand_total', 'currency', 
+            'notes', 'placed_at', 'shipping_address', 'items', 'status_history'
+        ]
+
+
         
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
@@ -290,37 +318,111 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_customer_name(self, obj):
         return obj.user.first_name()+''+obj.user.last_name() if obj.user else f"Guest ({obj.email})"
 
-    def create(self, validated_data):
-        # 1. Correctly pull the request from the serializer context
-        request = self.context.get('request')
-        if not request:
-            raise ValueError("Serializer context is missing the request object.")
+    # def create(self, validated_data):
+    #     # 1. Correctly pull the request from the serializer context
+    #     request = self.context.get('request')
+    #     if not request:
+    #         raise ValueError("Serializer context is missing the request object.")
 
-        # 2. Use the local variable 'request' (NOT self.request)
-        if request.user and request.user.is_authenticated:
-            cart = Cart.objects.get(user=request.user)
-        else:
-            # Note: For DRF requests, headers are usually accessed via request.META or request.headers (Django 2.2+)
-            guest_session_key = request.headers.get('X-Guest-Session-Key')
-            cart = Cart.objects.get(session_key=guest_session_key)
+    #     # 2. Use the local variable 'request' (NOT self.request)
+    #     if request.user and request.user.is_authenticated:
+    #         cart = Cart.objects.get(user=request.user)
+    #     else:
+    #         # Note: For DRF requests, headers are usually accessed via request.META or request.headers (Django 2.2+)
+    #         guest_session_key = request.headers.get('X-Guest-Session-Key')
+    #         cart = Cart.objects.get(session_key=guest_session_key)
+
+    #     with transaction.atomic():
+    #         # 3. Create the Order instance
+    #         #user = request.user if request.user.is_authenticated else None
+    #         order = Order.objects.create(**validated_data)
+            
+    #         # Pass the local request variable into the helper function
+    #         if not self._is_admin_panel(request):
+    #             # 4. Loop through cart items, create OrderItems, and decrement Product stock
+    #             for cart_item in cart.items.all():
+    #                 # variant = cart_item.product_variant_detail
+    #                 # product = variant.product_detail
+    #                 variant = cart_item.product_variant
+    #                 product = variant.product
+    #                 unit_price = variant.price_override if variant.price_override is not None else product.price
+    #                 item_subtotal = unit_price * cart_item.quantity
+
+    #                 # Create OrderItem snapshot
+    #                 OrderItem.objects.create(
+    #                     order=order,
+    #                     product=product,
+    #                     product_variant=variant,
+    #                     product_name_snapshot=product.name,
+    #                     sku_snapshot=variant.sku,
+    #                     unit_price=unit_price,
+    #                     quantity=cart_item.quantity,
+    #                     subtotal=item_subtotal
+    #                 )
+
+    #                 # 5. Decrement stock_quantity ONLY in the Product table
+    #                 Product.objects.filter(id=product.id).update(
+    #                     stock_quantity=F('stock_quantity') - cart_item.quantity
+    #                 )
+
+    #             # 6. Clear the user's cart items after successful checkout
+    #             cart.items.all().delete()
+
+    #         return order
+    def create(self, validated_data):
+        is_admin = self._is_admin()
 
         with transaction.atomic():
-            # 3. Create the Order instance
-            #user = request.user if request.user.is_authenticated else None
+            # Lock the cart row: a double-click or retry waits here, then finds an empty cart
+            # instead of creating a second order from the same items.
+            cart = Cart.objects.select_for_update().get(pk=validated_data['cart'].pk)
+            #validated_data['cart'] = cart
+
+            # Sorted by product so concurrent checkouts lock product rows in the same order (avoids deadlocks)
+            items = list(
+                cart.items
+                .select_related('product_variant__product')
+                .order_by('product_variant__product_id')
+            )
+
+            if not is_admin and not items:
+                raise serializers.ValidationError({"detail": "Cart is empty."})
+
             order = Order.objects.create(**validated_data)
-            
-            # Pass the local request variable into the helper function
-            if not self._is_admin_panel(request):
-                # 4. Loop through cart items, create OrderItems, and decrement Product stock
-                for cart_item in cart.items.all():
-                    # variant = cart_item.product_variant_detail
-                    # product = variant.product_detail
+            # After order is successfully created
+            OrderStatusHistory.objects.create(
+                order=order,
+                status=order.status,  # 'pending'
+                notes="Order placed successfully."
+            )
+            if not is_admin:
+                total = 0
+                for cart_item in items:
                     variant = cart_item.product_variant
                     product = variant.product
-                    unit_price = variant.price_override if variant.price_override is not None else product.price
+
+                    if not variant.is_active or not product.is_active:
+                        raise serializers.ValidationError(
+                            {"detail": f"{product.name} is no longer available."}
+                        )
+
+                    unit_price = (
+                        variant.price_override
+                        if variant.price_override is not None
+                        else product.price
+                    )
                     item_subtotal = unit_price * cart_item.quantity
 
-                    # Create OrderItem snapshot
+                    # Atomic check + decrement. If stock is short, nothing is updated and we roll back.
+                    updated = Product.objects.filter(
+                        id=product.id,
+                        stock_quantity__gte=cart_item.quantity,
+                    ).update(stock_quantity=F('stock_quantity') - cart_item.quantity)
+                    if not updated:
+                        raise serializers.ValidationError(
+                            {"detail": f"Insufficient stock for {product.name}."}
+                        )
+
                     OrderItem.objects.create(
                         order=order,
                         product=product,
@@ -329,19 +431,16 @@ class OrderSerializer(serializers.ModelSerializer):
                         sku_snapshot=variant.sku,
                         unit_price=unit_price,
                         quantity=cart_item.quantity,
-                        subtotal=item_subtotal
+                        subtotal=item_subtotal,
                     )
+                    total += item_subtotal
 
-                    # 5. Decrement stock_quantity ONLY in the Product table
-                    Product.objects.filter(id=product.id).update(
-                        stock_quantity=F('stock_quantity') - cart_item.quantity
-                    )
+                order.total_amount = total  # use your actual total field name
+                order.save(update_fields=['total_amount'])
 
-                # 6. Clear the user's cart items after successful checkout
                 cart.items.all().delete()
 
-            return order
-
+        return order
 
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:

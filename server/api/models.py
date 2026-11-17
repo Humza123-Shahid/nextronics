@@ -186,7 +186,19 @@ class Order(models.Model):
     notes = models.TextField(blank=True)
     placed_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
- 
+    def update_status(self, new_status, notes=""):
+        """Updates the order status and logs it in the history."""
+        if self.status != new_status:
+            old_status = self.status
+            self.status = new_status
+            self.save(update_fields=['status', 'updated_at'])
+            
+            # Create the history log
+            OrderStatusHistory.objects.create(
+                order=self,
+                status=new_status,
+                notes=notes or f"Status changed from {old_status} to {new_status}"
+            )
  
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
@@ -198,6 +210,21 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField()
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
 
+
+class OrderStatusHistory(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_history')
+    status = models.CharField(max_length=20, choices=Order.STATUS_CHOICES)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']  # Latest status changes first
+        verbose_name_plural = 'Order status histories'
+
+    def __str__(self):
+        return f"Order {self.order.order_number} -> {self.get_status_display()} at {self.created_at}"
+
+        
 class Payment(models.Model):
     STATUS_CHOICES = [('pending', 'Pending'), ('success', 'Success'), ('failed', 'Failed'), ('refunded', 'Refunded')]
  

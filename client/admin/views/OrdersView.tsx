@@ -36,7 +36,7 @@ export default function OrdersView() {
         const matchesSearch =
             (o.order_number && o.order_number.toLowerCase().includes(searchLower)) ||
             String(o.id).toLowerCase().includes(searchLower) ||
-            email.toLowerCase().includes(searchLower);
+            email?.toLowerCase().includes(searchLower);
 
         return matchesStatus && matchesSearch;
     });

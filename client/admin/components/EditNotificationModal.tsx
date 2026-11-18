@@ -13,7 +13,7 @@ export default function EditNotificationModal() {
     } = useAdmin();
 
     const [formData, setFormData] = useState({
-        user: "",
+        user: "null",
         notification_type: "system" as 'order' | 'promo' | 'system',
         title: "",
         message: "",
@@ -26,7 +26,7 @@ export default function EditNotificationModal() {
     useEffect(() => {
         if (selectedNotificationForEdit) {
             const notif = selectedNotificationForEdit as any;
-            const userId = notif.user_id ?? (typeof notif.user === "object" ? notif.user?.id : notif.user) ?? "";
+            const userId = notif.user_id ?? (typeof notif.user === "object" ? notif.user?.id : notif.user) ?? "null";
 
             setFormData({
                 user: String(userId),
@@ -109,15 +109,15 @@ export default function EditNotificationModal() {
                 <form onSubmit={handleSubmit} className="mt-5 space-y-4 text-xs">
                     {/* User FK Select */}
                     <div>
-                        <label className="mb-1 block text-[#8A99AD] font-medium">User Email *</label>
+                        <label className="mb-1 block text-[#8A99AD] font-medium">User Email</label>
                         <select
                             name="user"
                             value={formData.user}
                             onChange={handleInputChange}
-                            required
+                            //required
                             className="w-full rounded-lg border border-[#2E3A47] bg-[#24303F] px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
                         >
-                            <option value="">Select User Email</option>
+                            <option value="null">Select User Email</option>
                             {users.map((u) => (
                                 <option key={u.id} value={u.id}>
                                     {u.email} ({u.first_name || u.username || `ID: ${u.id}`})

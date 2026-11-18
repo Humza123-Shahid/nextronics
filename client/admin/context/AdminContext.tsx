@@ -1327,11 +1327,42 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, [carts, productVariants, products, users, enrichCartItemWithRelations]);
 
+  // const fetchNotifications = useCallback(async () => {
+  //   try {
+  //     const token = await getAuthToken();
+  //     if (!token) return;
+  //     //if (!enabled) return;
+  //     const data = await api.get<Notification[]>("/notifications/", token || undefined);
+  //     const enriched = data.map((n) => enrichNotificationWithUserEmail(n, users));
+  //     setNotifications(enriched);
+  //   } catch (err: any) {
+  //     console.error("Failed to fetch notifications:", err);
+  //   }
+  // }, [users, enrichNotificationWithUserEmail, getAuthToken]);
+  // useEffect(() => {
+  //   // 1. Fetch immediately on mount
+  //   fetchNotifications();
+
+  //   // 2. Poll every 10 seconds
+  //   const interval = setInterval(fetchNotifications, 10000);
+
+  //   // 3. Also refresh immediately when the admin focuses/returns to the browser tab
+  //   const handleVisibilityChange = () => {
+  //     if (document.visibilityState === "visible") {
+  //       fetchNotifications();
+  //     }
+  //   };
+  //   document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  //   return () => {
+  //     clearInterval(interval);
+  //     document.removeEventListener("visibilitychange", handleVisibilityChange);
+  //   };
+  // }, [fetchNotifications]);
   const fetchNotifications = useCallback(async () => {
     try {
       const token = await getAuthToken();
       if (!token) return;
-      //if (!enabled) return;
       const data = await api.get<Notification[]>("/notifications/", token || undefined);
       const enriched = data.map((n) => enrichNotificationWithUserEmail(n, users));
       setNotifications(enriched);
@@ -1340,6 +1371,35 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   }, [users, enrichNotificationWithUserEmail, getAuthToken]);
 
+  // Keep a ref to always point to the latest fetchNotifications without re-triggering the effect
+  const savedCallback = useRef(fetchNotifications);
+
+  useEffect(() => {
+    savedCallback.current = fetchNotifications;
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    // 1. Fetch immediately on mount
+    savedCallback.current();
+
+    // 2. Poll every 10 seconds using the ref
+    const interval = setInterval(() => {
+      savedCallback.current();
+    }, 10000);
+
+    // 3. Refresh immediately when the admin focuses/returns to the browser tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        savedCallback.current();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []); // Empty dependency array ensures this effect runs strictly once on mount
   const addNotification = async (data: Omit<Notification, "id" | "created_at">) => {
     const token = await getAuthToken();
     const payload = {

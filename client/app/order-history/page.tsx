@@ -115,112 +115,122 @@ export default function OrderCardList() {
 
     if (orders?.length === 0) {
         return (
-
-            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+            <>
                 <OrderHistoryHeader />
+                <div style={{ height: '100vh', justifyContent: 'center', display: 'flex', flexDirection: 'column' }}>
+                    <div className="text-center py-12 bg-white rounded-xl border border-gray-200" style={{ marginBottom: '100px' }}>
 
-                <Package className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-semibold text-gray-900">No orders found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                    When orders are placed, they will appear here.
-                </p>
+                        {/* <div style={{ height: '100vh', alignItems: 'center' }}> */}
+                        <Package className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-semibold text-gray-900">No orders found</h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                            When orders are placed, they will appear here.
+                        </p>
+                    </div>
+                </div>
                 <Footer />
-            </div>
+            </>
 
 
         );
     }
 
     return (
-        <div className="space-y-4">
+        // <div className="space-y-4">
+        <div className="min-h-screen flex flex-col gap-4">
             <OrderHistoryHeader />
-            {orders?.map((order) => (
-                <div
-                    key={order.id}
-                    onClick={() => handleCardClick(order)}
-                    className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 cursor-pointer overflow-hidden max-w-7xl mx-auto"
-                >
-                    {/* Card Header: Order Metadata */}
-                    <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 ">
-                        <div className="flex flex-wrap items-center gap-6 text-sm ">
-                            <div>
-                                <p className="text-gray-500 text-xs uppercase tracking-wider">Order ID</p>
-                                <p className="font-mono font-semibold text-gray-900">
-                                    #{order.order_number}
-                                </p>
-                            </div>
+            {/* <div style={{ height: '100%' }}> */}
+            <div className="flex-1 w-full">
+                {orders?.map((order) => (
+                    <div
+                        key={order.id}
+                        onClick={() => handleCardClick(order)}
+                        style={{ marginBottom: '20px' }}
+                        className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 cursor-pointer overflow-hidden max-w-7xl mx-auto"
+                    >
+                        {/* Card Header: Order Metadata */}
+                        <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4 ">
+                            <div className="flex flex-wrap items-center gap-6 text-sm ">
+                                <div>
+                                    <p className="text-gray-500 text-xs uppercase tracking-wider">Order ID</p>
+                                    <p className="font-mono font-semibold text-gray-900">
+                                        #{order.order_number}
+                                    </p>
+                                </div>
 
-                            <div>
-                                <p className="text-gray-500 text-xs uppercase tracking-wider flex items-center gap-1">
-                                    <Calendar className="w-3.5 h-3.5" /> Date Placed
-                                </p>
-                                <p className="font-medium text-gray-800">
-                                    {new Date(order.placed_at).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric",
-                                    })}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-gray-500 text-xs uppercase tracking-wider flex items-center gap-1">
-                                    <CreditCard className="w-3.5 h-3.5" /> Total
-                                </p>
-                                <p className="font-semibold text-gray-900">${order.grand_total}</p>
-                            </div>
-
-                            {/* Show customer name only if viewed by Admin */}
-                            {/* {isAdmin && order.customer_name && (
                                 <div>
                                     <p className="text-gray-500 text-xs uppercase tracking-wider flex items-center gap-1">
-                                        <User className="w-3.5 h-3.5" /> Customer
+                                        <Calendar className="w-3.5 h-3.5" /> Date Placed
                                     </p>
-                                    <p className="font-medium text-gray-800">{order.customer_name}</p>
+                                    <p className="font-medium text-gray-800">
+                                        {new Date(order.placed_at).toLocaleDateString("en-US", {
+                                            month: "short",
+                                            day: "numeric",
+                                            year: "numeric",
+                                        })}
+                                    </p>
                                 </div>
-                            )} */}
-                        </div>
 
-                        {/* Status Badge & Action Arrow */}
-                        <div className="flex items-center gap-3">
-                            {getStatusBadge(order.status)}
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                    </div>
+                                <div>
+                                    <p className="text-gray-500 text-xs uppercase tracking-wider flex items-center gap-1">
+                                        <CreditCard className="w-3.5 h-3.5" /> Total
+                                    </p>
+                                    <p className="font-semibold text-gray-900">${order.grand_total}</p>
+                                </div>
 
-                    {/* Card Body: Product Thumbnails & Names */}
-                    <div className="p-6 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 overflow-x-auto">
-                            {order.items.slice(0, 3).map((item) => (
-                                <div key={item.id} className="flex items-center gap-3 min-w-max">
-                                    <img
-                                        src={item.product_image || "/placeholder-tech.png"}
-                                        alt={item.product_name}
-                                        className="w-14 h-14 object-cover rounded-lg border border-gray-200 bg-gray-50"
-                                    />
+                                {/* Show customer name only if viewed by Admin */}
+                                {/* {isAdmin && order.customer_name && (
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900 line-clamp-1 max-w-[180px]">
-                                            {item.product_name}
+                                        <p className="text-gray-500 text-xs uppercase tracking-wider flex items-center gap-1">
+                                            <User className="w-3.5 h-3.5" /> Customer
                                         </p>
-                                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                                        <p className="font-medium text-gray-800">{order.customer_name}</p>
                                     </div>
-                                </div>
-                            ))}
+                                )} */}
+                            </div>
 
-                            {/* If an order has more than 3 electronics items, show a "+X more" badge */}
-                            {order.items.length > 3 && (
-                                <div className="w-14 h-14 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0">
-                                    +{order.items.length - 3} more
-                                </div>
-                            )}
+                            {/* Status Badge & Action Arrow */}
+                            <div className="flex items-center gap-3">
+                                {getStatusBadge(order.status)}
+                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-transform" />
+                            </div>
                         </div>
 
-                        <span className="hidden sm:inline-block text-sm font-medium text-blue-600 group-hover:underline shrink-0">
-                            View Details
-                        </span>
+                        {/* Card Body: Product Thumbnails & Names */}
+                        <div className="p-6 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4 overflow-x-auto">
+                                {order.items.slice(0, 3).map((item) => (
+                                    <div key={item.id} className="flex items-center gap-3 min-w-max">
+                                        <img
+                                            src={item.product_image || "/placeholder-tech.png"}
+                                            alt={item.product_name}
+                                            className="w-14 h-14 object-cover rounded-lg border border-gray-200 bg-gray-50"
+                                        />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 line-clamp-1 max-w-[180px]">
+                                                {item.product_name}
+                                            </p>
+                                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* If an order has more than 3 electronics items, show a "+X more" badge */}
+                                {order.items.length > 3 && (
+                                    <div className="w-14 h-14 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0">
+                                        +{order.items.length - 3} more
+                                    </div>
+                                )}
+                            </div>
+
+                            <span className="hidden sm:inline-block text-sm font-medium text-blue-600 group-hover:underline shrink-0">
+                                View Details
+                            </span>
+                        </div>
                     </div>
-                </div>
-            ))}
+
+                ))}
+            </div>
             <Footer />
         </div>
     );

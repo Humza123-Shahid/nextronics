@@ -370,7 +370,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     #         return order
     def create(self, validated_data):
-        is_admin = self._is_admin()
+        request = self.context.get('request')
+        is_admin = self._is_admin_panel(request)
 
         with transaction.atomic():
             # Lock the cart row: a double-click or retry waits here, then finds an empty cart
@@ -435,10 +436,27 @@ class OrderSerializer(serializers.ModelSerializer):
                     )
                     total += item_subtotal
 
-                order.total_amount = total  # use your actual total field name
-                order.save(update_fields=['total_amount'])
+                # order.total_amount = total  # use your actual total field name
+                # order.save(update_fields=['total_amount'])
 
                 cart.items.all().delete()
+
+        return order
+
+    def update(self, instance, validated_data):
+        old_status = instance.status
+        new_status = validated_data.get('status', old_status)
+
+        # Save the updated order fields
+        order = super().update(instance, validated_data)
+
+        # Only log to OrderStatusHistory if the status actually changed
+        if old_status != new_status:
+            OrderStatusHistory.objects.create(
+                order=order,
+                status=new_status,
+                notes=f"Status changed from {old_status} to {new_status}"
+            )
 
         return order
 

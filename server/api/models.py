@@ -186,19 +186,19 @@ class Order(models.Model):
     notes = models.TextField(blank=True)
     placed_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    def update_status(self, new_status, notes=""):
-        """Updates the order status and logs it in the history."""
-        if self.status != new_status:
-            old_status = self.status
-            self.status = new_status
-            self.save(update_fields=['status', 'updated_at'])
+    # def update_status(self, new_status, notes=""):
+    #     """Updates the order status and logs it in the history."""
+    #     if self.status != new_status:
+    #         old_status = self.status
+    #         self.status = new_status
+    #         self.save(update_fields=['status', 'updated_at'])
             
-            # Create the history log
-            OrderStatusHistory.objects.create(
-                order=self,
-                status=new_status,
-                notes=notes or f"Status changed from {old_status} to {new_status}"
-            )
+    #         # Create the history log
+    #         OrderStatusHistory.objects.create(
+    #             order=self,
+    #             status=new_status,
+    #             notes=notes or f"Status changed from {old_status} to {new_status}"
+    #         )
  
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

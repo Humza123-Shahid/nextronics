@@ -17,6 +17,8 @@ import {
     XCircle,
     Loader2,
 } from "lucide-react";
+import OrderDetailHeader from "./OrderDetailHeader";
+import Footer from "@/app/components/Footer";
 
 interface StatusHistoryItem {
     id: number;
@@ -75,6 +77,7 @@ const ALL_STEPS = [
 
 export default function OrderDetailsPage() {
     const params = useParams();
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
     const [order, setOrder] = useState<OrderDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -118,9 +121,9 @@ export default function OrderDetailsPage() {
                 setOrder(data);
                 setLoading(false);
             } catch (err: any) {
-                //setError(err.message || 'Unable to load order details.');
+                setError(err.message || 'Unable to load order details.');
             } finally {
-                //setLoading(false);
+                setLoading(false);
             }
         }
         fetchOrderDetails();
@@ -134,12 +137,12 @@ export default function OrderDetailsPage() {
         );
     }
 
-    if (!order) {
+    if (error || !order) {
         return (
             <div className="max-w-3xl mx-auto px-4 py-20 text-center">
                 <h2 className="text-xl font-bold text-gray-800">Order not found</h2>
                 <button
-                    onClick={() => router.push("/orders")}
+                    onClick={() => router.push("/order-history")}
                     className="mt-4 inline-flex items-center gap-2 text-indigo-600 font-medium hover:underline"
                 >
                     <ArrowLeft className="w-4 h-4" /> Back to Order History
@@ -164,240 +167,244 @@ export default function OrderDetailsPage() {
     const isTerminalNegative = order.status === "cancelled" || order.status === "refunded";
 
     return (
-        <div className="min-h-screen bg-gray-50/60 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-5xl mx-auto space-y-6">
-                {/* Header & Navigation */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <button
-                            onClick={() => router.push("/orders")}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 mb-2 transition-colors"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            Back to Orders
-                        </button>
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                                Order #{order.order_number}
-                            </h1>
-                            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 capitalize">
-                                {order.status_display}
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Placed on {new Date(order.placed_at).toLocaleString()}
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        {order.status === "pending" && (
-                            <button className="px-4 py-2 text-sm font-medium text-rose-600 bg-white border border-rose-200 rounded-xl hover:bg-rose-50 transition">
-                                Cancel Order
+        <>
+            <OrderDetailHeader />
+            <div className="min-h-screen bg-gray-50/60 py-8 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-5xl mx-auto space-y-6">
+                    {/* Header & Navigation */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <button
+                                onClick={() => router.push("/order-history")}
+                                className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 mb-2 transition-colors"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                Back to Orders
                             </button>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                                    Order #{order.order_number}
+                                </h1>
+                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 capitalize">
+                                    {order.status_display}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Placed on {new Date(order.placed_at).toLocaleString()}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {/* {order.status === "pending" && (
+                                <button className="px-4 py-2 text-sm font-medium text-rose-600 bg-white border border-rose-200 rounded-xl hover:bg-rose-50 transition">
+                                    Cancel Order
+                                </button>
+                            )} */}
+                            <button
+                                onClick={() => window.print()}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition"
+                            >
+                                <FileText className="w-4 h-4" />
+                                Invoice
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Dynamic Status Progress Tracker */}
+                    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5 sm:p-6">
+                        <div className="pb-6 border-b border-gray-100">
+                            <h2 className="text-base font-semibold text-gray-900">Order Progress</h2>
+                            <p className="text-sm text-gray-500">Live updates recorded from order status history</p>
+                        </div>
+
+                        {isTerminalNegative ? (
+                            <div className="mt-6 flex items-center gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800">
+                                <XCircle className="w-6 h-6 text-rose-600 shrink-0" />
+                                <div>
+                                    <p className="font-semibold text-sm capitalize">Order has been {order.status}</p>
+                                    <p className="text-xs text-rose-600 mt-0.5">
+                                        This order is closed and will not proceed further through standard fulfillment.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4 relative">
+                                {ALL_STEPS.map((step, index) => {
+                                    const isCompleted =
+                                        currentStepIndex !== -1 && index <= currentStepIndex;
+                                    const isCurrent = step.key === order.status;
+                                    const timestamp = historyMap.get(step.key);
+
+                                    return (
+                                        <div
+                                            key={step.key}
+                                            className="relative flex md:flex-col items-start md:items-center md:text-center gap-3.5 md:gap-2"
+                                        >
+                                            {/* Connector line for desktop view */}
+                                            {index < ALL_STEPS.length - 1 && (
+                                                <div
+                                                    className={`hidden md:block absolute top-4 left-1/2 w-full h-0.5 -z-0 ${currentStepIndex !== -1 && index < currentStepIndex
+                                                        ? "bg-emerald-500"
+                                                        : "bg-gray-200"
+                                                        }`}
+                                                />
+                                            )}
+
+                                            <div
+                                                className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all ${isCompleted
+                                                    ? "bg-emerald-500 text-white shadow-sm"
+                                                    : "bg-gray-100 text-gray-400 border border-gray-200"
+                                                    } ${isCurrent ? "ring-4 ring-emerald-100 scale-110" : ""}`}
+                                            >
+                                                {isCompleted ? <Check className="w-4 h-4 stroke-[2.5]" /> : <Clock className="w-4 h-4" />}
+                                            </div>
+
+                                            <div>
+                                                <p className={`text-sm font-semibold ${isCompleted ? "text-gray-900" : "text-gray-400"}`}>
+                                                    {step.label}
+                                                </p>
+                                                <p className="text-xs text-gray-500">{step.desc}</p>
+                                                {timestamp && <p className="text-[11px] font-medium text-emerald-600 mt-0.5">{timestamp}</p>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
-                        <button
-                            onClick={() => window.print()}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition"
-                        >
-                            <FileText className="w-4 h-4" />
-                            Invoice
-                        </button>
-                    </div>
-                </div>
-
-                {/* Dynamic Status Progress Tracker */}
-                <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5 sm:p-6">
-                    <div className="pb-6 border-b border-gray-100">
-                        <h2 className="text-base font-semibold text-gray-900">Order Progress</h2>
-                        <p className="text-sm text-gray-500">Live updates recorded from order status history</p>
                     </div>
 
-                    {isTerminalNegative ? (
-                        <div className="mt-6 flex items-center gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800">
-                            <XCircle className="w-6 h-6 text-rose-600 shrink-0" />
-                            <div>
-                                <p className="font-semibold text-sm capitalize">Order has been {order.status}</p>
-                                <p className="text-xs text-rose-600 mt-0.5">
-                                    This order is closed and will not proceed further through standard fulfillment.
-                                </p>
+                    {/* Content Section: Items + Summary / Addresses */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Items List */}
+                        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-gray-100">
+                                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                                    <PackageCheck className="w-5 h-5 text-indigo-600" />
+                                    Items Ordered ({order.items?.length})
+                                </h2>
+                            </div>
+
+                            <div className="divide-y divide-gray-100">
+                                {order.items?.map((item) => (
+                                    <div key={item.id} className="p-4 sm:p-6 flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gray-50 border border-gray-200/70 overflow-hidden shrink-0 flex items-center justify-center">
+                                                {item.product_image ? (
+                                                    <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Package className="w-6 h-6 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{item.product_name}</h3>
+                                                {item.variant && (
+                                                    <span className="inline-block mt-1 text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-md">
+                                                        {item.variant}
+                                                    </span>
+                                                )}
+                                                <p className="text-xs text-gray-500 mt-1.5">
+                                                    Qty: <span className="font-semibold text-gray-800">{item.quantity}</span> × {order.currency}{" "}
+                                                    {Number(item.unit_price).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right shrink-0">
+                                            <p className="font-bold text-gray-900">
+                                                {order.currency} {(Number(item.unit_price) * item.quantity).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    ) : (
-                        <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4 relative">
-                            {ALL_STEPS.map((step, index) => {
-                                const isCompleted =
-                                    currentStepIndex !== -1 && index <= currentStepIndex;
-                                const isCurrent = step.key === order.status;
-                                const timestamp = historyMap.get(step.key);
 
-                                return (
-                                    <div
-                                        key={step.key}
-                                        className="relative flex md:flex-col items-start md:items-center md:text-center gap-3.5 md:gap-2"
-                                    >
-                                        {/* Connector line for desktop view */}
-                                        {index < ALL_STEPS.length - 1 && (
-                                            <div
-                                                className={`hidden md:block absolute top-4 left-1/2 w-full h-0.5 -z-0 ${currentStepIndex !== -1 && index < currentStepIndex
-                                                    ? "bg-emerald-500"
-                                                    : "bg-gray-200"
-                                                    }`}
-                                            />
-                                        )}
-
-                                        <div
-                                            className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all ${isCompleted
-                                                ? "bg-emerald-500 text-white shadow-sm"
-                                                : "bg-gray-100 text-gray-400 border border-gray-200"
-                                                } ${isCurrent ? "ring-4 ring-emerald-100 scale-110" : ""}`}
-                                        >
-                                            {isCompleted ? <Check className="w-4 h-4 stroke-[2.5]" /> : <Clock className="w-4 h-4" />}
-                                        </div>
-
-                                        <div>
-                                            <p className={`text-sm font-semibold ${isCompleted ? "text-gray-900" : "text-gray-400"}`}>
-                                                {step.label}
-                                            </p>
-                                            <p className="text-xs text-gray-500">{step.desc}</p>
-                                            {timestamp && <p className="text-[11px] font-medium text-emerald-600 mt-0.5">{timestamp}</p>}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* Content Section: Items + Summary / Addresses */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Items List */}
-                    <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100">
-                            <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                                <PackageCheck className="w-5 h-5 text-indigo-600" />
-                                Items Ordered ({order.items?.length})
-                            </h2>
-                        </div>
-
-                        <div className="divide-y divide-gray-100">
-                            {order.items?.map((item) => (
-                                <div key={item.id} className="p-4 sm:p-6 flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gray-50 border border-gray-200/70 overflow-hidden shrink-0 flex items-center justify-center">
-                                            {item.product_image ? (
-                                                <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Package className="w-6 h-6 text-gray-400" />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{item.product_name}</h3>
-                                            {item.variant && (
-                                                <span className="inline-block mt-1 text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-md">
-                                                    {item.variant}
-                                                </span>
-                                            )}
-                                            <p className="text-xs text-gray-500 mt-1.5">
-                                                Qty: <span className="font-semibold text-gray-800">{item.quantity}</span> × {order.currency}{" "}
-                                                {Number(item.unit_price).toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-right shrink-0">
-                                        <p className="font-bold text-gray-900">
-                                            {order.currency} {(Number(item.unit_price) * item.quantity).toLocaleString()}
+                        {/* Sidebar Info */}
+                        <div className="space-y-6">
+                            {/* Shipping Address */}
+                            {order.shipping_address && (
+                                <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6 space-y-3">
+                                    <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                                        <MapPin className="w-5 h-5 text-indigo-600" />
+                                        Delivery Address
+                                    </h2>
+                                    <div className="text-sm text-gray-600 space-y-2 pt-1">
+                                        <p className="font-semibold text-gray-900 flex items-center gap-2">
+                                            <User className="w-4 h-4 text-gray-400" />
+                                            {order.shipping_address.full_name}
+                                        </p>
+                                        <p className="flex items-center gap-2">
+                                            <Phone className="w-4 h-4 text-gray-400" />
+                                            {order.shipping_address.phone_number}
+                                        </p>
+                                        <p className="leading-relaxed pl-6 text-gray-500">
+                                            {order.shipping_address.address_line1}, {order.shipping_address.city} (
+                                            {order.shipping_address.postal_code}), {order.shipping_address.country}
                                         </p>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
+                            )}
 
-                    {/* Sidebar Info */}
-                    <div className="space-y-6">
-                        {/* Shipping Address */}
-                        {order.shipping_address && (
+                            {/* Payment Info */}
                             <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6 space-y-3">
                                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                                    <MapPin className="w-5 h-5 text-indigo-600" />
-                                    Delivery Address
+                                    <CreditCard className="w-5 h-5 text-indigo-600" />
+                                    Payment Info
                                 </h2>
-                                <div className="text-sm text-gray-600 space-y-2 pt-1">
-                                    <p className="font-semibold text-gray-900 flex items-center gap-2">
-                                        <User className="w-4 h-4 text-gray-400" />
-                                        {order.shipping_address.full_name}
-                                    </p>
-                                    <p className="flex items-center gap-2">
-                                        <Phone className="w-4 h-4 text-gray-400" />
-                                        {order.shipping_address.phone_number}
-                                    </p>
-                                    <p className="leading-relaxed pl-6 text-gray-500">
-                                        {order.shipping_address.address_line1}, {order.shipping_address.city} (
-                                        {order.shipping_address.postal_code}), {order.shipping_address.country}
-                                    </p>
+                                <div className="flex items-center justify-between text-sm pt-1">
+                                    <span className="text-gray-500">Method</span>
+                                    <span className="font-medium text-gray-900">{order.payment_method_display}</span>
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Payment Info */}
-                        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6 space-y-3">
-                            <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                                <CreditCard className="w-5 h-5 text-indigo-600" />
-                                Payment Info
-                            </h2>
-                            <div className="flex items-center justify-between text-sm pt-1">
-                                <span className="text-gray-500">Method</span>
-                                <span className="font-medium text-gray-900">{order.payment_method_display}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-500">Status</span>
-                                <span
-                                    className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${order.payment_status === "paid"
-                                        ? "bg-emerald-100 text-emerald-700"
-                                        : "bg-amber-100 text-amber-800"
-                                        }`}
-                                >
-                                    {order.payment_status_display}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Price Breakdown */}
-                        <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6 space-y-3">
-                            <h2 className="text-base font-semibold text-gray-900">Order Summary</h2>
-                            <div className="space-y-2 text-sm pt-1">
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Subtotal</span>
-                                    <span>{order.currency} {Number(order.subtotal).toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Shipping Fee</span>
-                                    <span>{order.currency} {Number(order.shipping_total).toLocaleString()}</span>
-                                </div>
-                                {Number(order.discount_total) > 0 && (
-                                    <div className="flex justify-between text-emerald-600 font-medium">
-                                        <span>Discount</span>
-                                        <span>- {order.currency} {Number(order.discount_total).toLocaleString()}</span>
-                                    </div>
-                                )}
-                                {Number(order.tax_total) > 0 && (
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Tax</span>
-                                        <span>{order.currency} {Number(order.tax_total).toLocaleString()}</span>
-                                    </div>
-                                )}
-                                <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
-                                    <span className="font-bold text-gray-900">Total</span>
-                                    <span className="text-lg font-bold text-indigo-600">
-                                        {order.currency} {Number(order.grand_total).toLocaleString()}
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-500">Status</span>
+                                    <span
+                                        className={`text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize ${order.payment_status === "paid"
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : "bg-amber-100 text-amber-800"
+                                            }`}
+                                    >
+                                        {order.payment_status_display}
                                     </span>
+                                </div>
+                            </div>
+
+                            {/* Price Breakdown */}
+                            <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6 space-y-3">
+                                <h2 className="text-base font-semibold text-gray-900">Order Summary</h2>
+                                <div className="space-y-2 text-sm pt-1">
+                                    <div className="flex justify-between text-gray-600">
+                                        <span>Subtotal</span>
+                                        <span>{order.currency} {Number(order.subtotal).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-gray-600">
+                                        <span>Shipping Fee</span>
+                                        <span>{order.currency} {Number(order.shipping_total).toLocaleString()}</span>
+                                    </div>
+                                    {Number(order.discount_total) > 0 && (
+                                        <div className="flex justify-between text-emerald-600 font-medium">
+                                            <span>Discount</span>
+                                            <span>- {order.currency} {Number(order.discount_total).toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    {Number(order.tax_total) > 0 && (
+                                        <div className="flex justify-between text-gray-600">
+                                            <span>Tax</span>
+                                            <span>{order.currency} {Number(order.tax_total).toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
+                                        <span className="font-bold text-gray-900">Total</span>
+                                        <span className="text-lg font-bold text-indigo-600">
+                                            {order.currency} {Number(order.grand_total).toLocaleString()}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+            <Footer />
+        </>
     );
 }

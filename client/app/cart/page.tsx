@@ -619,6 +619,18 @@ export default function CartPage() {
             // } catch (emailErr) {
             //     console.error("Failed to send email:", emailErr);
             // }
+            const notificationPayload = {
+                notification_type: "system",
+                title: "New order placed",
+                message: `Order #${orderResult.order_number} placed by ${email}. Total: ${orderResult.currency} ${orderResult.grand_total}`
+            };
+
+            const responseNotification = await fetch('http://127.0.0.1:8080/api/notifications/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(notificationPayload),
+            });
+
             alert(`Order placed successfully! Order Number: ${orderResult.order_number}`);
 
             // Clear cart / redirect user to confirmation page

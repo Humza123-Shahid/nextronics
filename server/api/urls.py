@@ -1,4 +1,5 @@
 from django.urls import path, include
+from . import views
 from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet, AddressViewSet, CategoryViewSet, BrandViewSet, ProductViewSet,
@@ -32,6 +33,12 @@ router.register(r'notifications', NotificationViewSet)
 router.register(r'page-visits', PageVisitViewSet)
 
 urlpatterns = [
+    path("wishlist/", views.WishlistView.as_view()),
+    path("wishlist/ids/", views.WishlistIdsView.as_view()),
+    path("wishlist/toggle/", views.WishlistToggleView.as_view()),
+    path("wishlist/clear/", views.WishlistClearView.as_view()),
+    path("wishlist/items/", views.WishlistItemCreateView.as_view()),
+    path("wishlist/items/<int:product_id>/", views.WishlistItemDeleteView.as_view()),
     path('auth/login/', login_view, name='auth-login'),
     path('auth/signup/', signup_view, name='auth-signup'),
     path('cart/add/', AddToCartView.as_view(), name='add-to-cart'),

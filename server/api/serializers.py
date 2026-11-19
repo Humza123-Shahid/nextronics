@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Address, Category, Brand,OrderStatusHistory, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
+from .models import User, Address,WishlistItem,Wishlist, Category, Brand,OrderStatusHistory, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
 from django.db.models import F
 from django.db import transaction
 
@@ -245,6 +245,59 @@ class CartSerializer(serializers.ModelSerializer):
 
 #             # CRITICAL: Always return the created instance in DRF create() methods
 #             return order
+
+
+class WishlistProductSerializer(serializers.ModelSerializer):
+    """Lightweight product payload for wishlist cards."""
+
+    category_name = serializers.CharField(source="category.name", read_only=True, default=None)
+    in_stock = serializers.SerializerMethodField()
+    discount_percent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            "id", "name", "slug", "short_description", "sku",
+            "price", "compare_at_price", "discount_percent",
+            "image", "rating", "rating_count",
+            "stock_quantity", "in_stock", "category_name",
+        ]
+
+    def get_in_stock(self, obj):
+        return obj.stock_quantity > 0
+
+    def get_discount_percent(self, obj):
+        if obj.compare_at_price and obj.compare_at_price > obj.price:
+            return round((1 - obj.price / obj.compare_at_price) * 100)
+        return 0
+
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    # read: nested product, write: just send {"product_id": 12}
+    product = WishlistProductSerializer(read_only=True)
+    product_id = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.filter(is_active=True, status="active"),
+        source="product",
+        write_only=True,
+    )
+
+    class Meta:
+        model = WishlistItem
+        fields = ["id", "product", "product_id", "added_at"]
+        read_only_fields = ["id", "added_at"]
+
+
+class WishlistSerializer(serializers.ModelSerializer):
+    items = WishlistItemSerializer(many=True, read_only=True)
+    count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Wishlist
+        fields = ["id", "items", "count", "updated_at"]
+
+    def get_count(self, obj):
+        return len(obj.items.all())  # uses prefetched items, no extra query
+
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem

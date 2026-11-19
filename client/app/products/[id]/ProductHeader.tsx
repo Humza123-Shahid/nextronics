@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { getAuthCookie } from "@/app/actions/auth";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 import {
     Cpu,
@@ -19,7 +19,7 @@ import {
     X,
     ChevronDown,
 } from "lucide-react";
-import { resolveGadgetHref } from "../lib/gadgetsNav"; // adjust path if needed
+import { resolveGadgetHref } from "../../lib/gadgetsNav"; // adjust path if needed
 
 type NavItem = { name: string; href: string; badge?: "HOT" | "NEW" };
 export interface Product {

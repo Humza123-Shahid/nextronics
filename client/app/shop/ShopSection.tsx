@@ -402,12 +402,12 @@ export default function ShopSection() {
                                     // <motion.li
                                     <motion.a
                                         key={p.id}
-                                        // href={`/products/${String(p.id)}`}
-                                        href={"/products"}
-                                        onMouseDown={() => {
-                                            // Fires immediately when any mouse button (left, right, or middle) is pressed down
-                                            localStorage.setItem("productID", String(p.id));
-                                        }}
+                                        href={`/products/${String(p.id)}`}
+                                        // href={"/products"}
+                                        // onMouseDown={() => {
+                                        //     // Fires immediately when any mouse button (left, right, or middle) is pressed down
+                                        //     localStorage.setItem("productID", String(p.id));
+                                        // }}
                                         //onClick={() => handleProductClick(String(p.id))}
                                         whileHover={{ scale: 1.03, y: -4 }}
                                         transition={{ duration: 0.3, ease: "easeOut" }}

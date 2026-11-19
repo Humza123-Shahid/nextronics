@@ -1,5 +1,6 @@
 import re
 from django.db.models import Q, F
+from django.db.models import Prefetch
 from rest_framework.generics import ListAPIView
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
@@ -13,8 +14,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import User, Address, Category, Brand, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
-from .serializers import UserSerializer,OrderDetailSerializer, AddressSerializer, CategorySerializer, BrandSerializer, ProductSerializer, ProductVariantSerializer, AttributeValueSerializer, InventorySerializer, WarehouseSerializer, CartSerializer, CartItemSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer, ShippingMethodSerializer, ShipmentSerializer, NotificationSerializer, TestimonialSerializer, SocialSerializer,PageVisitSerializer
+from .models import User, Address, Category,WishlistItem,Wishlist, Brand, Product, ProductVariant, AttributeValue, Inventory, Warehouse, Cart, CartItem, Order, OrderItem, Payment, ShippingMethod, Shipment, Notification, Testimonial, Social,PageVisit
+from .serializers import UserSerializer,WishlistItemSerializer,WishlistSerializer,OrderDetailSerializer, AddressSerializer, CategorySerializer, BrandSerializer, ProductSerializer, ProductVariantSerializer, AttributeValueSerializer, InventorySerializer, WarehouseSerializer, CartSerializer, CartItemSerializer, OrderSerializer, OrderItemSerializer, PaymentSerializer, ShippingMethodSerializer, ShipmentSerializer, NotificationSerializer, TestimonialSerializer, SocialSerializer,PageVisitSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.authentication import SessionAuthentication
@@ -394,6 +395,130 @@ class AddToCartView(APIView):
 
         serializer = CartSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+def get_wishlist(request, create=True):
+    """
+    Return this visitor's Wishlist. Every row stores:
+      - user        -> set when logged in, otherwise NULL
+      - session_key -> the current session key
+    Guest and user wishlists stay separate (no merging).
+    """
+    session = request.session
+    user = request.user if request.user.is_authenticated else None
+
+    if not session.session_key:
+        if not create:
+            return Wishlist.objects.filter(user=user).first() if user else None
+        session.create()
+    key = session.session_key
+
+    if user:
+        wl = Wishlist.objects.filter(user=user).first()
+        if wl is None:
+            return Wishlist.objects.create(user=user, session_key=key) if create else None
+        if wl.session_key != key:  # session rotates on login/logout
+            wl.session_key = key
+            wl.save(update_fields=["session_key", "updated_at"])
+        return wl
+
+    wl = Wishlist.objects.filter(user__isnull=True, session_key=key).first()
+    if wl is None and create:
+        wl = Wishlist.objects.create(session_key=key)
+    return wl
+
+
+def serialize(request, wishlist):
+    if wishlist is None:
+        return {"id": None, "items": [], "count": 0, "updated_at": None}
+    wishlist = (
+        Wishlist.objects.filter(pk=wishlist.pk)
+        .prefetch_related(
+            Prefetch(
+                "items",
+                queryset=WishlistItem.objects.select_related("product", "product__category"),
+            )
+        )
+        .get()
+    )
+    return WishlistSerializer(wishlist, context={"request": request}).data
+
+
+# ---------- views ----------
+
+class WishlistView(APIView):
+    """GET /api/wishlist/  ->  current wishlist with items"""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(serialize(request, get_wishlist(request, create=False)))
+
+
+class WishlistItemCreateView(APIView):
+    """POST /api/wishlist/items/  {"product_id": 1}  ->  adds (idempotent)"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        wl = get_wishlist(request)
+        ser = WishlistItemSerializer(data=request.data, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        _, created = WishlistItem.objects.get_or_create(
+            wishlist=wl, product=ser.validated_data["product"]
+        )
+        return Response(
+            serialize(request, wl),
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+class WishlistItemDeleteView(APIView):
+    """DELETE /api/wishlist/items/<product_id>/"""
+    permission_classes = [AllowAny]
+
+    def delete(self, request, product_id):
+        wl = get_wishlist(request, create=False)
+        if wl:
+            WishlistItem.objects.filter(wishlist=wl, product_id=product_id).delete()
+        return Response(serialize(request, wl))
+
+
+class WishlistToggleView(APIView):
+    """POST /api/wishlist/toggle/  {"product_id": 1}  ->  {"added": bool, "count": n}"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        wl = get_wishlist(request)
+        ser = WishlistItemSerializer(data=request.data, context={"request": request})
+        ser.is_valid(raise_exception=True)
+        product = ser.validated_data["product"]
+        item, created = WishlistItem.objects.get_or_create(wishlist=wl, product=product)
+        if not created:
+            item.delete()
+        return Response({"added": created, "count": wl.items.count()})
+
+
+class WishlistIdsView(APIView):
+    """GET /api/wishlist/ids/ -> {"product_ids": [..]}  (for heart buttons on listings)"""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        wl = get_wishlist(request, create=False)
+        ids = list(wl.items.values_list("product_id", flat=True)) if wl else []
+        return Response({"product_ids": ids})
+
+
+class WishlistClearView(APIView):
+    """DELETE /api/wishlist/clear/"""
+    permission_classes = [AllowAny]
+
+    def delete(self, request):
+        wl = get_wishlist(request, create=False)
+        if wl:
+            wl.items.all().delete()
+        return Response(serialize(request, wl))
+
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()

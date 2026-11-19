@@ -471,11 +471,12 @@ export default function VerticalProductSlider({
                 // <motion.div
                 <motion.a
                   key={product.id}
-                  href={"/products"}
-                  onMouseDown={() => {
-                    // Fires immediately when any mouse button (left, right, or middle) is pressed down
-                    localStorage.setItem("productID", product.id);
-                  }}
+                  href={`/products/${String(product.id)}`}
+                  // href={"/products"}
+                  // onMouseDown={() => {
+                  //   // Fires immediately when any mouse button (left, right, or middle) is pressed down
+                  //   localStorage.setItem("productID", product.id);
+                  // }}
                   //onClick={() => handleProductClick(product.id)}
                   variants={rowVariants}
                   whileHover={{ y: -2 }}

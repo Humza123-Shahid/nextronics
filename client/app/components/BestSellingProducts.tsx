@@ -188,9 +188,10 @@ function ProductCard({
 }: ProductCardProps) {
   const router = useRouter();
   const handleClick = () => {
-    localStorage.setItem("productID", String(product.id))
+    //localStorage.setItem("productID", String(product.id))
     // Perform any custom logic here
-    router.push('/products');
+    // router.push('/products');
+    router.push(`/products/${String(product.id)}`);
   };
   const triggerCartUpdate = () => {
     window.dispatchEvent(new Event("cartUpdated"));

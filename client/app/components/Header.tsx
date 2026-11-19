@@ -516,7 +516,7 @@ export default function Header() {
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                 <Link
                   href="#wishlist"
-                  className="hidden sm:flex relative p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 items-center gap-1.5"
+                  className="flex relative p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 items-center gap-1.5"
                   title="Wishlist"
                 >
                   <div className="relative">
@@ -641,8 +641,8 @@ export default function Header() {
                       className="flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-xs text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400"
                     >
                       <User className="w-5 h-5 stroke-[1.75px]" />
-                      My Account
-                      <ChevronDown className="w-3 h-3" />
+                      {/* My Account
+                      <ChevronDown className="w-3 h-3" /> */}
                     </button>
                     <AnimatePresence>
                       {guestAccountDropdownOpen && (
@@ -1065,9 +1065,9 @@ export default function Header() {
                         <Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                       </div>
                     </div>
-                    <span className="text-base sm:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate max-w-[110px] sm:max-w-none">
+                    {/* <span className="text-base sm:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white truncate max-w-[110px] sm:max-w-none">
                       NEXTRONICS
-                    </span>
+                    </span> */}
                   </Link>
                 </div>
 
@@ -1115,7 +1115,7 @@ export default function Header() {
                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                     <Link
                       href="#wishlist"
-                      className={`hidden sm:flex relative ${compactIconBtnClasses}`}
+                      className={`flex relative ${compactIconBtnClasses}`}
                     >
                       <Heart className="w-5 h-5 stroke-[1.75px]" />
                       <span className="absolute top-0.5 right-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow animate-badge-pop">
@@ -1242,8 +1242,8 @@ export default function Header() {
                           className="flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-xs text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400"
                         >
                           <User className="w-5 h-5 stroke-[1.75px]" />
-                          My Account
-                          <ChevronDown className="w-3 h-3" />
+                          {/* My Account
+                          <ChevronDown className="w-3 h-3" /> */}
                         </button>
                         <AnimatePresence>
                           {guestAccountDropdownOpen && (

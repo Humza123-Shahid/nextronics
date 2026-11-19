@@ -205,6 +205,19 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
     const [imgLoaded, setImgLoaded] = useState(false);
     const [isActive, setIsActive] = useState(false);
 
+    const [canHover, setCanHover] = useState(true);
+
+    useEffect(() => {
+        const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
+        setCanHover(mq.matches);
+        const onChange = (e: MediaQueryListEvent) => setCanHover(e.matches);
+        mq.addEventListener("change", onChange);
+        return () => mq.removeEventListener("change", onChange);
+    }, []);
+
+    // On touch devices there is no hover, so always show the controls
+    const showControls = isActive || !canHover;
+
     // Add a ref to target the image element
     const imgRef = useRef<HTMLImageElement>(null);
     const addTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -222,9 +235,10 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
     //     addTimeout.current = setTimeout(() => setIsAdded(false), 1600);
     // }
     const handleClick = () => {
-        localStorage.setItem("productID", String(product.id))
+        //localStorage.setItem("productID", String(product.id))
         // Perform any custom logic here
-        router.push('/products');
+        // router.push('/products');
+        router.push(`/products/${String(product.id)}`);
     };
     const triggerCartUpdate = () => {
         window.dispatchEvent(new Event("cartUpdated"));
@@ -329,7 +343,8 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
                     className={styles.cardIcons}
                     variants={iconsGroupVariants}
                     initial="rest"
-                    animate={isActive ? "hover" : "rest"}
+                    // animate={isActive ? "hover" : "rest"}
+                    animate={showControls ? "hover" : "rest"}
                 >
                     <motion.button
                         variants={iconBtnVariants}
@@ -362,7 +377,8 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
                 <motion.button
                     variants={addToCartVariants}
                     initial="rest"
-                    animate={isActive ? "hover" : "rest"}
+                    //animate={isActive ? "hover" : "rest"}
+                    animate={showControls ? "hover" : "rest"}
                     whileTap={{ scale: 0.97 }}
                     type="button"
                     className={styles.addToCart}

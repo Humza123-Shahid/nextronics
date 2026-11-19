@@ -149,6 +149,29 @@ class CartItem(models.Model):
     class Meta:
         unique_together = ('cart', 'product_variant')
 
+class Wishlist(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='wishlist')
+    session_key = models.CharField(max_length=100, blank=True, null=True)  # for guest carts
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+ 
+ 
+class WishlistItem(models.Model):
+    wishlist  = models.ForeignKey(Wishlist, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="wishlist_items")
+    added_at = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        ordering = ["-added_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["wishlist", "product"], name="unique_product_per_wishlist"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.product} in {self.wishlist}"
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'), ('confirmed', 'Confirmed'), ('processing', 'Processing'),

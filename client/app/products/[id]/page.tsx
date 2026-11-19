@@ -1,16 +1,16 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { notFound } from 'next/navigation';
 import { getAuthCookie } from "@/app/actions/auth";
 import Image from 'next/image';
 import Link from 'next/link';
 import ProductHeader from "./ProductHeader";
-import Footer from "../components/Footer";
+import Footer from "../../components/Footer";
 import { Metadata } from 'next';
 import { Star, ShoppingBag, CheckCircle, XCircle, Truck, ShieldCheck, ArrowRight, Minus, Plus } from 'lucide-react';
 // import { Product } from "@/admin/types";
-import { type ProductVariant, type Product, type Category, type Brand } from "../components/data";
+import { type ProductVariant, type Product, type Category, type Brand } from "../../components/data";
 
 
 
@@ -78,12 +78,12 @@ export default function ProductDetailPage() {
   //   //console.log(product)
   // }
   const router = useRouter();
-
+  const params = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [brand, setBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const productId = params?.id;
 
   // 1. Add the quantity state
   const [quantity, setQuantity] = useState<number>(1);
@@ -91,7 +91,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const productId = localStorage.getItem("productID");
+        //const productId = localStorage.getItem("productID");
         if (!productId) {
           router.push('/'); // Redirect home if no ID in storage
           return;

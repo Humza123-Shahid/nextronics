@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useMemo, type MouseEvent } from "react";
 
 import { useRouter } from 'next/navigation';
+import { wishlistApi } from "../lib/wishlist";
 import { getAuthCookie } from "@/app/actions/auth";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { ShoppingCart, Heart, Eye, ArrowLeftRight, Star, Check } from "lucide-react";
@@ -297,6 +298,24 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
             alert(error.message || 'Something went wrong');
         }
     }
+    //const [active, setActive] = useState(initial);
+    const [busy, setBusy] = useState(false);
+
+    async function handle(productId: string) {
+        if (busy) return;
+        setBusy(true);
+        console.log('here in wishlist')
+        //setActive((a) => !a); // optimistic
+        try {
+            const { added, count } = await wishlistApi.toggle(Number(productId));
+            //setActive(added);
+            //onChange?.(added, count);
+        } catch {
+            //((a) => !a); // rollback
+        } finally {
+            setBusy(false);
+        }
+    }
     // 1. Determine the active/default variant and check its stock quantity
     const defaultVariant = product.variants?.find(v => v.is_active) || product.variants?.[0];
     const stockQuantity = ((product as any).stock_quantity ?? 0);
@@ -354,7 +373,7 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
                         aria-pressed={isLiked}
                         aria-label={`${isLiked ? "Remove" : "Add"} ${product.name} ${isLiked ? "from" : "to"} wishlist`}
                         className={styles.iconBtn}
-                        onClick={() => setIsLiked((v) => !v)}
+                        onClick={() => { setIsLiked((v) => !v); handle(product.id); }}
                     >
                         <motion.span
                             animate={{ scale: isLiked ? [1, 1.4, 1] : 1 }}

@@ -142,6 +142,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 from datetime import timedelta
 
@@ -173,4 +174,5 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
     'x-client-type',
     "x-guest-session-key", # Add your custom header here
+    "access-token",
 ]

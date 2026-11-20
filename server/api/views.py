@@ -398,22 +398,34 @@ class AddToCartView(APIView):
 
 
 
-def get_wishlist(request, create=True):
+def get_wishlist(self,request, create=True):
     """
     Return this visitor's Wishlist. Every row stores:
       - user        -> set when logged in, otherwise NULL
       - session_key -> the current session key
     Guest and user wishlists stay separate (no merging).
     """
-    session = request.session
-    user = request.user if request.user.is_authenticated else None
-
-    if not session.session_key:
+    
+    #session = request.session
+    user = self.request.user if self.request.user.is_authenticated else None
+    print("usernew",user)
+    session_key = request.data.get('session_key')
+    if not session_key:
+        session_key = self.request.META.get('HTTP_X_GUEST_SESSION_KEY')
+    print("usernew",user)
+    #print("session",session.session_key)
+    # if not session.session_key:
+    #     print('hereinsession')
+    #     if not create:
+    #         return Wishlist.objects.filter(user=user).first() if user else None
+    #     session.create()
+    # key = session.session_key
+    if not session_key:
+        print('hereinsession')
         if not create:
             return Wishlist.objects.filter(user=user).first() if user else None
-        session.create()
-    key = session.session_key
-
+        #session.create()
+    key = session_key
     if user:
         wl = Wishlist.objects.filter(user=user).first()
         if wl is None:
@@ -424,6 +436,7 @@ def get_wishlist(request, create=True):
         return wl
 
     wl = Wishlist.objects.filter(user__isnull=True, session_key=key).first()
+    print("wishlist",wl)
     if wl is None and create:
         wl = Wishlist.objects.create(session_key=key)
     return wl
@@ -452,7 +465,7 @@ class WishlistView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response(serialize(request, get_wishlist(request, create=False)))
+        return Response(serialize(request, get_wishlist(self,request, create=False)))
 
 
 class WishlistItemCreateView(APIView):
@@ -460,7 +473,7 @@ class WishlistItemCreateView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        wl = get_wishlist(request)
+        wl = get_wishlist(self,request)
         ser = WishlistItemSerializer(data=request.data, context={"request": request})
         ser.is_valid(raise_exception=True)
         _, created = WishlistItem.objects.get_or_create(
@@ -477,7 +490,7 @@ class WishlistItemDeleteView(APIView):
     permission_classes = [AllowAny]
 
     def delete(self, request, product_id):
-        wl = get_wishlist(request, create=False)
+        wl = get_wishlist(self,request, create=False)
         if wl:
             WishlistItem.objects.filter(wishlist=wl, product_id=product_id).delete()
         return Response(serialize(request, wl))
@@ -486,9 +499,10 @@ class WishlistItemDeleteView(APIView):
 class WishlistToggleView(APIView):
     """POST /api/wishlist/toggle/  {"product_id": 1}  ->  {"added": bool, "count": n}"""
     permission_classes = [AllowAny]
-
+    print('herebeforepost')
     def post(self, request):
-        wl = get_wishlist(request)
+        print('hereinpost')
+        wl = get_wishlist(self,request)
         ser = WishlistItemSerializer(data=request.data, context={"request": request})
         ser.is_valid(raise_exception=True)
         product = ser.validated_data["product"]
@@ -503,7 +517,7 @@ class WishlistIdsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        wl = get_wishlist(request, create=False)
+        wl = get_wishlist(self,request, create=False)
         ids = list(wl.items.values_list("product_id", flat=True)) if wl else []
         return Response({"product_ids": ids})
 
@@ -513,7 +527,7 @@ class WishlistClearView(APIView):
     permission_classes = [AllowAny]
 
     def delete(self, request):
-        wl = get_wishlist(request, create=False)
+        wl = get_wishlist(self,request, create=False)
         if wl:
             wl.items.all().delete()
         return Response(serialize(request, wl))

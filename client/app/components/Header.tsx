@@ -515,7 +515,7 @@ export default function Header() {
               <NotificationsDropdown />
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                 <Link
-                  href="#wishlist"
+                  href="wishlist"
                   className="flex relative p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 items-center gap-1.5"
                   title="Wishlist"
                 >
@@ -1114,7 +1114,7 @@ export default function Header() {
 
                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                     <Link
-                      href="#wishlist"
+                      href="wishlist"
                       className={`flex relative ${compactIconBtnClasses}`}
                     >
                       <Heart className="w-5 h-5 stroke-[1.75px]" />

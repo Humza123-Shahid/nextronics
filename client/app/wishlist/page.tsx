@@ -18,8 +18,9 @@ export default function WishlistPage() {
         try {
             setError(null);
             apply(await wishlistApi.get());
-        } catch {
+        } catch (err) {
             setError("Couldn't load your wishlist. Please try again.");
+            console.log(err)
         } finally {
             setLoading(false);
         }

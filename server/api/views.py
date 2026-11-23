@@ -504,8 +504,10 @@ class WishlistToggleView(APIView):
         print('hereinpost')
         wl = get_wishlist(self,request)
         ser = WishlistItemSerializer(data=request.data, context={"request": request})
+        print('serliazer:',ser)
         ser.is_valid(raise_exception=True)
         product = ser.validated_data["product"]
+        print('product:',product)
         item, created = WishlistItem.objects.get_or_create(wishlist=wl, product=product)
         if not created:
             item.delete()

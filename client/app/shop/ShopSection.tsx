@@ -180,9 +180,61 @@ export default function ShopSection() {
         if (sort === "rating") list.sort((a, b) => b.rating - a.rating);
         return list;
     }, [products, category, categoryMap, query, sort, maxPrice]);
-    const toggleWish = (id: number) =>
-        setWishlist((w) => (w.includes(id) ? w.filter((x) => x !== id) : [...w, id]));
+    const fetchWishList = async () => {
 
+        const response = await wishlistApi.get();
+        //const data = await response.json();
+        //console.log(response);
+        setWishlist(new Set(response.items.map(i => i.product.id)));
+        //const exists: boolean = response.items.some((res) => res.product.id === Number(product.id));
+        // console.log(product.id);
+        //setIsLiked(exists);
+    }
+    useEffect(() => {
+        fetchWishList();
+
+        const handleWishlistEvent = (e: Event) => {
+
+            fetchWishList();
+        };
+
+        const handleStorageEvent = (e: StorageEvent) => {
+            if (e.key === "wishlist_updated_at") {
+                fetchWishList();
+            }
+        };
+
+        window.addEventListener("wishlistUpdated", handleWishlistEvent);
+        window.addEventListener("storage", handleStorageEvent);
+
+        return () => {
+            window.removeEventListener("wishlistUpdated", handleWishlistEvent);
+            window.removeEventListener("storage", handleStorageEvent);
+        };
+    }, []);
+    // const toggleWish = (id: number) =>
+    //     setWishlist((w) => (w.includes(id) ? w.filter((x) => x !== id) : [...w, id]));
+
+    const triggerWishlistUpdate = () => {
+        window.dispatchEvent(new Event("wishlistUpdated"));
+    };
+    async function toggleWish(id: number) {
+        // if (busy) return;
+        // setBusy(true);
+        console.log('here in wishlist')
+        console.log(id)
+        //setActive((a) => !a); // optimistic
+        try {
+            const { added, count } = await wishlistApi.toggle(Number(id));
+            //setActive(added);
+            //onChange?.(added, count);
+            triggerWishlistUpdate();
+        } catch {
+            //((a) => !a); // rollback
+        } finally {
+            //setBusy(false);
+        }
+    }
     // 5. Add loading and error layout state checks
     if (isLoading) return <div className="text-center py-20 font-semibold">Loading products...</div>;
     if (error) return <div className="text-center py-20 text-red-500 font-semibold">Error: {error}</div>;
@@ -438,7 +490,11 @@ export default function ShopSection() {
                                             <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100">
                                                 <button
                                                     type="button"
-                                                    onClick={() => toggleWish(p.id)}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();  // Stops <motion.a> from navigating
+                                                        e.stopPropagation();
+                                                        toggleWish(p.id)
+                                                    }}
                                                     aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
                                                     aria-pressed={wished}
                                                     className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 shadow flex items-center justify-center hover:text-blue-600"
@@ -447,6 +503,11 @@ export default function ShopSection() {
                                                 </button>
                                                 <button
                                                     type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();  // Stops <motion.a> from navigating
+                                                        e.stopPropagation(); // Stops event bubbling
+                                                        //handleCompare(p.id); // Call your compare logic here
+                                                    }}
                                                     aria-label="Compare"
                                                     className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 shadow flex items-center justify-center hover:text-blue-600"
                                                 >

@@ -208,6 +208,49 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
 
     const [canHover, setCanHover] = useState(true);
 
+    // useEffect(() => {
+    //     const fetchWishList = async () => {
+
+    //         const response = await wishlistApi.get();
+    //         //const data = await response.json();
+    //         console.log(response);
+    //         const exists: boolean = response.items.some((res) => res.product.id === Number(product.id));
+    //         console.log(product.id);
+    //         setIsLiked(exists);
+    //     }
+    //     fetchWishList()
+    // }, []);
+    const fetchWishList = async () => {
+
+        const response = await wishlistApi.get();
+        //const data = await response.json();
+        console.log(response);
+        const exists: boolean = response.items.some((res) => res.product.id === Number(product.id));
+        console.log(product.id);
+        setIsLiked(exists);
+    }
+    useEffect(() => {
+        fetchWishList();
+
+        const handleWishlistEvent = (e: Event) => {
+
+            fetchWishList();
+        };
+
+        const handleStorageEvent = (e: StorageEvent) => {
+            if (e.key === "wishlist_updated_at") {
+                fetchWishList();
+            }
+        };
+
+        window.addEventListener("wishlistUpdated", handleWishlistEvent);
+        window.addEventListener("storage", handleStorageEvent);
+
+        return () => {
+            window.removeEventListener("wishlistUpdated", handleWishlistEvent);
+            window.removeEventListener("storage", handleStorageEvent);
+        };
+    }, []);
     useEffect(() => {
         const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
         setCanHover(mq.matches);
@@ -215,7 +258,6 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
         mq.addEventListener("change", onChange);
         return () => mq.removeEventListener("change", onChange);
     }, []);
-
     // On touch devices there is no hover, so always show the controls
     const showControls = isActive || !canHover;
 
@@ -300,16 +342,20 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
     }
     //const [active, setActive] = useState(initial);
     const [busy, setBusy] = useState(false);
-
+    const triggerWishlistUpdate = () => {
+        window.dispatchEvent(new Event("wishlistUpdated"));
+    };
     async function handle(productId: string) {
         if (busy) return;
         setBusy(true);
         console.log('here in wishlist')
+        console.log(productId)
         //setActive((a) => !a); // optimistic
         try {
             const { added, count } = await wishlistApi.toggle(Number(productId));
             //setActive(added);
             //onChange?.(added, count);
+            triggerWishlistUpdate();
         } catch {
             //((a) => !a); // rollback
         } finally {

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { GADGET_TAB_MAP, goToGadgets } from "../lib/gadgetsNav"; // adjust path if needed
 import { useAuth } from "../context/AuthContext";
+import { Wishlist } from "../lib/wishlist";
 
 
 interface SubMenuItem {
@@ -71,6 +72,7 @@ export interface Cart {
   created_at: string;
   updated_at: string;
 }
+
 const shopHref = (name: string) => `/shop?category=${encodeURIComponent(name)}`;
 
 const CATEGORIES: CategoryItem[] = [
@@ -146,6 +148,7 @@ export default function Header() {
     setTimeout(() => goToGadgets(tab), delay);
   };
   const [cart, setCart] = useState<Cart | null>(null);
+  const [wishlist, setWishlist] = useState<Wishlist | null>(null);
   const fetchCart = async () => {
 
     // const token = localStorage.getItem('token');
@@ -227,6 +230,86 @@ export default function Header() {
 
     return () => {
       window.removeEventListener("cartUpdated", handleCartUpdate);
+    };
+  }, []);
+  const fetchWishList = async () => {
+    console.log("here in fedtchwish");
+    // setCart(userCart || null);
+    if (typeof window !== 'undefined') {
+      const token = await getAuthCookie();
+      const guestSessionKey = localStorage.getItem('guest_session_key');
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      // Strictly check that the token is a valid, non-empty string
+      if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+        headers['X-Guest-Session-Key'] = guestSessionKey;
+      }
+
+      try {
+        const response = await fetch('http://127.0.0.1:8080/api/wishlist/', {
+          method: 'GET',
+          headers: headers
+        });
+
+        if (!response.ok) {
+          // Safely inspect the backend error details instead of crashing blindly
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Server error payload:', errorData);
+          throw new Error(`Failed to fetch cart. Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data);
+        //setWishlist(data);
+        const userWishlist = Array.isArray(data) ? data[0] : data;
+        setWishlist(userWishlist || null);
+      } catch (error) {
+        console.error("Cart retrieval failed:", error);
+      }
+    }
+  };
+  // useEffect(() => {
+  //   fetchWishList();
+  //   const handleWishListUpdate = () => {
+  //     fetchWishList();
+  //   };
+
+  //   window.addEventListener("wishlistUpdated", handleWishListUpdate);
+
+  //   return () => {
+  //     window.removeEventListener("wishlistUpdated", handleWishListUpdate);
+  //   };
+  // }, []);
+  useEffect(() => {
+    fetchWishList();
+
+    const handleWishlistEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ count?: number }>;
+      if (typeof customEvent.detail?.count === "number") {
+        setWishlist((prev) =>
+          prev ? { ...prev, count: customEvent.detail.count! } : prev
+        );
+      }
+      fetchWishList();
+    };
+
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === "wishlist_updated_at") {
+        fetchWishList();
+      }
+    };
+
+    window.addEventListener("wishlistUpdated", handleWishlistEvent);
+    window.addEventListener("storage", handleStorageEvent);
+
+    return () => {
+      window.removeEventListener("wishlistUpdated", handleWishlistEvent);
+      window.removeEventListener("storage", handleStorageEvent);
     };
   }, []);
   const items = cart?.items || [];
@@ -522,7 +605,8 @@ export default function Header() {
                   <div className="relative">
                     <Heart className="w-5 h-5 stroke-[1.75px]" />
                     <span className="absolute -top-1.5 -right-2 bg-orange-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow animate-badge-pop">
-                      2
+                      {/* 2 */}
+                      {wishlist?.count}
                     </span>
                   </div>
                 </Link>
@@ -1119,7 +1203,8 @@ export default function Header() {
                     >
                       <Heart className="w-5 h-5 stroke-[1.75px]" />
                       <span className="absolute top-0.5 right-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow animate-badge-pop">
-                        2
+                        {/* 2 */}
+                        {wishlist?.count}
                       </span>
                     </Link>
                   </motion.div>

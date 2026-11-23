@@ -276,7 +276,8 @@ class WishlistItemSerializer(serializers.ModelSerializer):
     # read: nested product, write: just send {"product_id": 12}
     product = WishlistProductSerializer(read_only=True)
     product_id = serializers.PrimaryKeyRelatedField(
-        queryset=Product.objects.filter(is_active=True, status="active"),
+        # queryset=Product.objects.filter(is_active=True, status="active"),
+        queryset=Product.objects.filter(is_active=True),
         source="product",
         write_only=True,
     )

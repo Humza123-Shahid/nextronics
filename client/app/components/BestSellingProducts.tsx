@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, type SVGProps } from "react";
+import { useMemo, useState, useEffect, type SVGProps } from "react";
 import { useRouter } from 'next/navigation';
+import { wishlistApi } from "../lib/wishlist";
 import { getAuthCookie } from "@/app/actions/auth";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
@@ -387,19 +388,69 @@ export default function BestSellingProducts({
     () => tabs.find((tab) => tab.id === activeTabId) ?? tabs[0],
     [tabs, activeTabId]
   );
+  const fetchWishList = async () => {
 
-  function toggleWishlist(product: Product) {
-    setWishlist((prev) => {
-      const next = new Set(prev);
-      if (next.has(product.id)) {
-        next.delete(product.id);
-      } else {
-        next.add(product.id);
-      }
-      return next;
-    });
+    const response = await wishlistApi.get();
+    //const data = await response.json();
+    //console.log(response);
+    setWishlist(new Set(response.items.map(i => i.product.id)));
+    //const exists: boolean = response.items.some((res) => res.product.id === Number(product.id));
+    // console.log(product.id);
+    //setIsLiked(exists);
   }
+  useEffect(() => {
+    fetchWishList();
 
+    const handleWishlistEvent = (e: Event) => {
+
+      fetchWishList();
+    };
+
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === "wishlist_updated_at") {
+        fetchWishList();
+      }
+    };
+
+    window.addEventListener("wishlistUpdated", handleWishlistEvent);
+    window.addEventListener("storage", handleStorageEvent);
+
+    return () => {
+      window.removeEventListener("wishlistUpdated", handleWishlistEvent);
+      window.removeEventListener("storage", handleStorageEvent);
+    };
+  }, []);
+  // function toggleWishlist(product: Product) {
+  //   setWishlist((prev) => {
+  //     const next = new Set(prev);
+  //     if (next.has(product.id)) {
+  //       next.delete(product.id);
+  //     } else {
+  //       next.add(product.id);
+  //     }
+  //     return next;
+  //   });
+  // }
+  const triggerWishlistUpdate = () => {
+    window.dispatchEvent(new Event("wishlistUpdated"));
+  };
+  async function toggleWishlist(product: Product) {
+    // if (busy) return;
+    // setBusy(true);
+    console.log('here in wishlist')
+    console.log(product.id)
+    //setActive((a) => !a); // optimistic
+    try {
+      const { added, count } = await wishlistApi.toggle(Number(product.id));
+      //setActive(added);
+      //onChange?.(added, count);
+      triggerWishlistUpdate();
+    } catch {
+      //((a) => !a); // rollback
+    } finally {
+      //setBusy(false);
+    }
+  }
   return (
     <section
       className={`${styles.section} ${display.variable} ${body.variable} ${mono.variable}`}

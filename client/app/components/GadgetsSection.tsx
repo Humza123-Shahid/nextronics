@@ -5,6 +5,7 @@ import { useRef, useState, useEffect, useMemo, type MouseEvent } from "react";
 import { useRouter } from 'next/navigation';
 import { wishlistApi } from "../lib/wishlist";
 import { getAuthCookie } from "@/app/actions/auth";
+import { notifyWishlistUpdated } from "../lib/wishlistSync";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { ShoppingCart, Heart, Eye, ArrowLeftRight, Star, Check } from "lucide-react";
 import { motion, AnimatePresence, useMotionValue, useTransform, useReducedMotion } from "framer-motion";
@@ -356,6 +357,7 @@ function ProductCard({ product, index, reduceMotion }: { product: Product; index
             //setActive(added);
             //onChange?.(added, count);
             triggerWishlistUpdate();
+            notifyWishlistUpdated(0);
         } catch {
             //((a) => !a); // rollback
         } finally {

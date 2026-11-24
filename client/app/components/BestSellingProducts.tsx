@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, type SVGProps } from "react";
 import { useRouter } from 'next/navigation';
 import { wishlistApi } from "../lib/wishlist";
 import { getAuthCookie } from "@/app/actions/auth";
+import { notifyWishlistUpdated } from "../lib/wishlistSync";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./BestSellingProducts.module.css";
@@ -445,6 +446,7 @@ export default function BestSellingProducts({
       //setActive(added);
       //onChange?.(added, count);
       triggerWishlistUpdate();
+      notifyWishlistUpdated(0);
     } catch {
       //((a) => !a); // rollback
     } finally {

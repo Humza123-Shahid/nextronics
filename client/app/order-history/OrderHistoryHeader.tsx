@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { Wishlist } from "../lib/wishlist";
 import { getAuthCookie } from "@/app/actions/auth";
 import { useAuth } from "../context/AuthContext";
 
@@ -157,6 +158,7 @@ export default function OrderHistoryHeader() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const { user, isAuthenticated, isAdmin, logout } = useAuth();
     const [cart, setCart] = useState<Cart | null>(null);
+    const [wishlist, setWishlist] = useState<Wishlist | null>(null);
     const handleSignOut = (e: React.MouseEvent) => {
         e.preventDefault();
         logout(); // Your sign-out logic h    ere
@@ -230,6 +232,74 @@ export default function OrderHistoryHeader() {
         };
     }, []);
     const items = cart?.items || [];
+    const fetchWishList = async () => {
+
+        // setCart(userCart || null);
+        if (typeof window !== 'undefined') {
+            const token = await getAuthCookie();
+            const guestSessionKey = localStorage.getItem('guest_session_key');
+
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+
+            // Strictly check that the token is a valid, non-empty string
+            if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+                headers['Authorization'] = `Bearer ${token}`;
+            } else if (guestSessionKey && guestSessionKey !== 'null' && guestSessionKey !== 'undefined') {
+                headers['X-Guest-Session-Key'] = guestSessionKey;
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:8080/api/wishlist/', {
+                    method: 'GET',
+                    headers: headers
+                });
+
+                if (!response.ok) {
+                    // Safely inspect the backend error details instead of crashing blindly
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Server error payload:', errorData);
+                    throw new Error(`Failed to fetch cart. Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log(data);
+                //setWishlist(data);
+                const userWishlist = Array.isArray(data) ? data[0] : data;
+                setWishlist(userWishlist || null);
+            } catch (error) {
+                console.error("Cart retrieval failed:", error);
+            }
+        }
+    };
+    useEffect(() => {
+        fetchWishList();
+
+        const handleWishlistEvent = (e: Event) => {
+            const customEvent = e as CustomEvent<{ count?: number }>;
+            if (typeof customEvent.detail?.count === "number") {
+                setWishlist((prev) =>
+                    prev ? { ...prev, count: customEvent.detail.count! } : prev
+                );
+            }
+            fetchWishList();
+        };
+
+        const handleStorageEvent = (e: StorageEvent) => {
+            if (e.key === "wishlist_updated_at") {
+                fetchWishList();
+            }
+        };
+
+        window.addEventListener("wishlistUpdated", handleWishlistEvent);
+        window.addEventListener("storage", handleStorageEvent);
+
+        return () => {
+            window.removeEventListener("wishlistUpdated", handleWishlistEvent);
+            window.removeEventListener("storage", handleStorageEvent);
+        };
+    }, []);
     // Lock page scroll behind the mobile drawer; close it if the screen grows to desktop
     useEffect(() => {
         if (!mobileOpen) return;
@@ -393,7 +463,7 @@ export default function OrderHistoryHeader() {
                             <Link href="#wishlist" className={actionLink}>
                                 <span className="relative">
                                     <Heart className="w-5 h-5" />
-                                    <span className={badge}>0</span>
+                                    <span className={badge}>{wishlist?.count}</span>
                                 </span>
                                 <span className="sr-only">Wishlist</span>
                             </Link>

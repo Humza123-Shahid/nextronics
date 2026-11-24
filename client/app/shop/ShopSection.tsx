@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { wishlistApi } from "../lib/wishlist";
+import { notifyWishlistUpdated } from "../lib/wishlistSync";
 import { getAuthCookie } from "@/app/actions/auth";
 import {
     motion,
@@ -185,7 +187,7 @@ export default function ShopSection() {
         const response = await wishlistApi.get();
         //const data = await response.json();
         //console.log(response);
-        setWishlist(new Set(response.items.map(i => i.product.id)));
+        setWishlist(response.items.map(i => i.product.id));
         //const exists: boolean = response.items.some((res) => res.product.id === Number(product.id));
         // console.log(product.id);
         //setIsLiked(exists);
@@ -229,6 +231,7 @@ export default function ShopSection() {
             //setActive(added);
             //onChange?.(added, count);
             triggerWishlistUpdate();
+            notifyWishlistUpdated(0);
         } catch {
             //((a) => !a); // rollback
         } finally {

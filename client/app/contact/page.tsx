@@ -8,7 +8,7 @@ export const metadata = {
     title: "Contact | Nextronics",
 };
 
-export default function COntactPage() {
+export default function ContactPage() {
     return (
         <>
             <ContactHeader />

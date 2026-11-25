@@ -6,7 +6,7 @@ from .views import (
     ProductVariantViewSet, AttributeValueViewSet, InventoryViewSet, WarehouseViewSet,
     CartViewSet, CartItemViewSet, OrderViewSet, OrderItemViewSet, PaymentViewSet,
     ShippingMethodViewSet, ShipmentViewSet, NotificationViewSet, TestimonialViewSet,OrderDetailViewSet,
-    SocialViewSet, PageVisitViewSet, login_view, signup_view,admin_check,SpecialHighlightsView,AddToCartView
+    SocialViewSet, PageVisitViewSet, login_view, signup_view,admin_check,SpecialHighlightsView,AddToCartView,CompareAPIView
 )
 
 router = DefaultRouter()
@@ -42,6 +42,7 @@ urlpatterns = [
     path('auth/login/', login_view, name='auth-login'),
     path('auth/signup/', signup_view, name='auth-signup'),
     path('cart/add/', AddToCartView.as_view(), name='add-to-cart'),
+    path('compare/', CompareAPIView.as_view(), name='compare-api'),
     path('admin/check/', admin_check),
     path('products/special-highlights/', SpecialHighlightsView.as_view()),
     path('', include(router.urls)),

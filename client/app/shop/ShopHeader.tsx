@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import CompareNavLink from '@/app/components/CompareNavLink';
 import { getAuthCookie } from "@/app/actions/auth";
 import { Wishlist } from "../lib/wishlist";
 import { AnimatePresence, motion } from "framer-motion";
@@ -509,13 +510,14 @@ export default function ShopHeader() {
               </Link>
             </li>
             <li>
-              <Link href="#compare" className={actionLink}>
+              {/* <Link href="#compare" className={actionLink}>
                 <span className="relative">
                   <Shuffle className="w-5 h-5" />
                   <span className={badge}>0</span>
                 </span>
                 <span className="sr-only">Compare</span>
-              </Link>
+              </Link> */}
+              <CompareNavLink />
             </li>
             <li className="relative group">
               <Link href="/cart" className={actionLink}>

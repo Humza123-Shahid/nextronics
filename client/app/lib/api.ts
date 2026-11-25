@@ -1,4 +1,5 @@
 // lib/api.ts
+import type { CompareResponse } from '@/app/types/compare';
 export interface ProductVariant {
     id: number;
     sku: string;
@@ -31,5 +32,16 @@ export async function getSpecialHighlights(limit = 16): Promise<ProductCard[]> {
         { next: { revalidate: 300 } } // cache for 5 minutes
     );
     if (!res.ok) throw new Error('Failed to load special highlights');
+    return res.json();
+}
+
+export async function fetchCompare(ids: number[]): Promise<CompareResponse> {
+    const res = await fetch(`${API_URL}/api/compare/?ids=${ids.join(',')}`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail ?? 'Could not load the comparison.');
+    }
     return res.json();
 }

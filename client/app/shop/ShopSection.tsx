@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { wishlistApi } from "../lib/wishlist";
+import { useCompare } from '@/app/context/CompareContext';
 import { notifyWishlistUpdated } from "../lib/wishlistSync";
+import styles from '../components/Compare.module.css';
 import { getAuthCookie } from "@/app/actions/auth";
 import {
     motion,
@@ -79,7 +81,9 @@ export default function ShopSection() {
     const shopRef = useRef<HTMLAnchorElement>(null);
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
-
+    //const [active, setActive] = useState(false);
+    const { has, toggle, ready } = useCompare();
+    //const active = ready && has(product.id);
     const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), {
         stiffness: 300,
         damping: 25,
@@ -447,6 +451,7 @@ export default function ShopSection() {
                                 const isInStock = stockQuantity > 0;
                                 // const Icon = p.icon;
                                 const wished = wishlist.includes(p.id);
+                                const isActive = ready && has(p.id);
                                 const productCategoryName = categoryMap.get(p.category) || "Uncategorized";
                                 //localStorage.setItem("productID", String(p.id))
                                 return (
@@ -497,6 +502,7 @@ export default function ShopSection() {
                                                         e.preventDefault();  // Stops <motion.a> from navigating
                                                         e.stopPropagation();
                                                         toggleWish(p.id)
+
                                                     }}
                                                     aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
                                                     aria-pressed={wished}
@@ -506,13 +512,18 @@ export default function ShopSection() {
                                                 </button>
                                                 <button
                                                     type="button"
+
+
                                                     onClick={(e) => {
                                                         e.preventDefault();  // Stops <motion.a> from navigating
                                                         e.stopPropagation(); // Stops event bubbling
                                                         //handleCompare(p.id); // Call your compare logic here
+                                                        toggle(p);
+
                                                     }}
+                                                    className={`${styles.toggle} ${isActive ? styles.toggleActive : ''}`}
                                                     aria-label="Compare"
-                                                    className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 shadow flex items-center justify-center hover:text-blue-600"
+                                                // className="w-8 h-8 rounded-full bg-white dark:bg-slate-900 shadow flex items-center justify-center hover:text-blue-600"
                                                 >
                                                     <Shuffle className="w-4 h-4" />
                                                 </button>

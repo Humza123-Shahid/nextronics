@@ -7,6 +7,8 @@ import React, { Suspense } from "react";
 import { AdminProvider } from "@/admin/context/AdminContext";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CompareProvider } from "./context/CompareContext";   // NEW
+import CompareNotice from "@/app/components/CompareNotice";
 // import AdminGate from "./components/AdminGate";
 
 const geistSans = Geist({
@@ -40,17 +42,20 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
         <AuthProvider>
-          {/* <Header /> */}
-          {/* {isAdmin && <AdminProvider> */}
-          {/* <AdminGate> */}
-          <Suspense fallback={null}>
-            <AnalyticsTracker />
-          </Suspense>
-          <main className="flex-1">
-            {children}
-          </main>
-          {/* <Footer /> */}
-          {/* </AdminGate> */}
+          <CompareProvider>
+            {/* <Header /> */}
+            {/* {isAdmin && <AdminProvider> */}
+            {/* <AdminGate> */}
+            <Suspense fallback={null}>
+              <AnalyticsTracker />
+            </Suspense>
+            <main className="flex-1">
+              {children}
+            </main>
+            {/* <Footer /> */}
+            {/* </AdminGate> */}
+            <CompareNotice />                                 {/* NEW */}
+          </CompareProvider>
         </AuthProvider>
       </body>
     </html>

@@ -20,8 +20,17 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.authentication import SessionAuthentication
 import uuid
+from decimal import Decimal
+
+from django.conf import settings
+from rest_framework import status
+from .models import Product
+# from products.models import Product  # <-- change to your app's path
 
 
+MIN_ITEMS = 2
+MAX_ITEMS = 4
+CURRENCY = getattr(settings, 'COMPARE_CURRENCY', '$')
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -993,3 +1002,140 @@ def signup_view(request):
 @permission_classes([IsAuthenticated, IsAdminUserStrict])
 def admin_check(request):
     return Response({'isAdmin': True, 'username': request.user.username})
+
+
+
+# ---------- formatting helpers ----------
+def _money(value):
+    return f'{CURRENCY}{value:,.2f}'
+
+
+def _fmt(value):
+    if value in (None, '', [], {}):
+        return None
+    if isinstance(value, bool):
+        return 'Yes' if value else 'No'
+    if isinstance(value, (list, tuple)):
+        return ', '.join(str(v) for v in value)
+    return str(value)
+
+
+def _fmt_dimensions(d):
+    if isinstance(d, dict) and all(k in d for k in ('l', 'w', 'h')):
+        return f"{d['l']} × {d['w']} × {d['h']} cm"
+    return _fmt(d)
+
+
+def _label(key):
+    return str(key).replace('_', ' ').strip().capitalize()
+
+
+def _row(label, values, best=None):
+    return {
+        'label': label,
+        'values': values,
+        'differs': len(set(values)) > 1,
+        'best': best or [],
+    }
+
+
+def build_sections(products):
+    prices = [p.price for p in products]
+    lowest = min(prices)
+    rated = [p.rating if p.rating_count else Decimal('0') for p in products]
+    top = max(rated)
+
+    overview = [
+        _row('Price', [_money(p.price) for p in products],
+             best=[i for i, v in enumerate(prices) if v == lowest]),
+        _row('Brand', [p.brand.name if p.brand else None for p in products]),
+        _row('Category', [p.category.name if p.category else None for p in products]),
+        _row('Rating',
+             [f'{p.rating} ({p.rating_count})' if p.rating_count else None for p in products],
+             best=[i for i, v in enumerate(rated) if top > 0 and v == top]),
+        _row('Availability',
+             ['In stock' if p.stock_quantity > 0 else 'Out of stock' for p in products]),
+        _row('SKU', [p.sku for p in products]),
+    ]
+
+    physical = [
+        _row('Weight', [f'{p.weight_kg} kg' if p.weight_kg else None for p in products]),
+        _row('Dimensions', [_fmt_dimensions(p.dimensions) for p in products]),
+    ]
+    physical = [r for r in physical if any(r['values'])]
+
+    keys = []
+    for p in products:
+        if isinstance(p.attributes, dict):
+            for k in p.attributes:
+                if k not in keys:
+                    keys.append(k)
+    specs = [
+        _row(_label(k), [
+            _fmt(p.attributes.get(k)) if isinstance(p.attributes, dict) else None
+            for p in products
+        ])
+        for k in keys
+    ]
+
+    sections = [
+        {'title': 'Overview', 'rows': overview},
+        {'title': 'Physical', 'rows': physical},
+        {'title': 'Specifications', 'rows': specs},
+    ]
+    return [s for s in sections if s['rows']]
+
+
+def _parse_ids(raw):
+    ids = []
+    for part in (raw or '').split(','):
+        part = part.strip()
+        if not part:
+            continue
+        if not part.isdigit():
+            raise ValueError('ids must be a comma-separated list of numbers.')
+        if int(part) not in ids:
+            ids.append(int(part))
+    return ids
+
+
+# ---------- API ----------
+class CompareAPIView(APIView):
+    """GET /api/compare/?ids=12,15,18  ->  products + comparison matrix."""
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        try:
+            ids = _parse_ids(request.query_params.get('ids'))
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(ids) > MAX_ITEMS:
+            return Response({'detail': f'You can compare up to {MAX_ITEMS} products.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        found = (Product.objects
+                 .filter(pk__in=ids, is_active=True, status='active')
+                 .select_related('brand', 'category')
+                 .in_bulk())
+        products = [found[i] for i in ids if i in found]  # keep requested order
+
+        columns = [{
+            'id': p.pk,
+            'name': p.name,
+            'slug': p.slug,
+            'image': request.build_absolute_uri(p.image.url) if p.image else None,
+            'price_display': _money(p.price),
+            'compare_at_display': (
+                _money(p.compare_at_price)
+                if p.compare_at_price and p.compare_at_price > p.price else None
+            ),
+        } for p in products]
+
+        return Response({
+            'products': columns,
+            'sections': build_sections(products) if len(products) >= MIN_ITEMS else [],
+            'min_items': MIN_ITEMS,
+            'max_items': MAX_ITEMS,
+        })

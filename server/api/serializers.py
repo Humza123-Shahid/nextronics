@@ -57,7 +57,9 @@ class ProductSerializer(serializers.ModelSerializer):
         
         # 2. Bind the extra fields cleanly during field initialization
         fields['variants'] = ProductVariantCartSerializer(many=True, read_only=True) # or pass the proper arguments
-        
+        fields['category_name'] = serializers.CharField(
+            source='category.name', read_only=True, default=None
+        )
         return fields
 
 # Product variant serializer supporting both read and write

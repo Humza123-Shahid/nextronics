@@ -7,14 +7,15 @@ import type { CompareResponse } from '@/app/types/compare';
 import styles from './Compare.module.css';
 
 export default function CompareView({ data }: { data: CompareResponse }) {
-    const { replaceAll, clear } = useCompare();
+    // const { replaceAll, clear } = useCompare();
+    const { clear } = useCompare();
     const [diffOnly, setDiffOnly] = useState(false);
     const { products, sections } = data;
 
     // The URL is the source of truth: keep the stored list in sync with it.
-    useEffect(() => {
-        replaceAll(products.map(({ id, name, slug, image }) => ({ id, name, slug, image })));
-    }, [products, replaceAll]);
+    // useEffect(() => {
+    //     replaceAll(products.map(({ id, name, slug, image }) => ({ id, name, slug, image })));
+    // }, [products, replaceAll]);
 
     const visibleSections = sections
         .map((s) => ({ ...s, rows: s.rows.filter((r) => !diffOnly || r.differs) }))

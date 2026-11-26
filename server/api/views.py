@@ -10,7 +10,7 @@ from .permissions import IsAdminUserCustom
 from .permissions import IsAdminUserStrict
 from django.db.models import Q
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -104,6 +104,16 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     authentication_classes = [JWTAuthentication]
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "name",
+        "slug",
+        "sku",
+        "short_description",
+        "description",
+        "category__name",
+        "brand__name",
+    ]
     #permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = None
     def get_permissions(self):

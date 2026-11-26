@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Wishlist } from "../lib/wishlist";
+import CompareNavLink from '@/app/components/CompareNavLink';
 import { getAuthCookie } from "@/app/actions/auth";
 import { useAuth } from "../context/AuthContext";
 
@@ -350,8 +351,9 @@ export default function WishListHeader() {
                                         <Link
                                             href={resolveGadgetHref(n.href)}
                                             onClick={() => setMobileOpen(false)}
-                                            className={`flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 ${n.href === "/shop" ? "text-blue-600 dark:text-cyan-400" : ""
-                                                }`}
+                                            // className={`flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 ${n.href === "/shop" ? "text-blue-600 dark:text-cyan-400" : ""
+                                            //     }`}
+                                            className={`flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800`}
                                         >
                                             <span>{n.name}</span>
                                             {n.badge && <NavBadge type={n.badge} />}
@@ -359,7 +361,7 @@ export default function WishListHeader() {
                                     </li>
                                 ))}
                                 <li className="flex flex-wrap gap-x-1 gap-y-1 pt-3 border-t border-slate-200 dark:border-slate-800">
-                                    <Link href="#wishlist" className={actionLink}>
+                                    {/* <Link href="#wishlist" className={actionLink}>
                                         <Heart className="w-4 h-4" /> Wishlist
                                     </Link>
                                     <Link href="#compare" className={actionLink}>
@@ -367,6 +369,31 @@ export default function WishListHeader() {
                                     </Link>
                                     <Link href="#cart" className={actionLink}>
                                         <ShoppingCart className="w-4 h-4" /> Cart
+                                    </Link> */}
+                                    <Link
+                                        href="/wishlist"
+                                        onClick={() => setMobileOpen(false)}
+                                        className={actionLink}
+                                    >
+                                        <span className="relative">
+                                            <Heart className="w-4 h-4" />
+                                            <span className={badge}>{wishlist?.count ?? 0}</span>
+                                        </span>
+                                        <span>Wishlist</span>
+                                    </Link>
+                                    <CompareNavLink showLabel onClick={() => setMobileOpen(false)} />
+                                    <Link
+                                        href="/cart"
+                                        onClick={() => setMobileOpen(false)}
+                                        className={actionLink}
+                                    >
+                                        <span className="relative">
+                                            <ShoppingCart className="w-4 h-4" />
+                                            <span className={badge}>
+                                                {items.reduce((acc, item) => acc + item.quantity, 0)}
+                                            </span>
+                                        </span>
+                                        <span>Cart</span>
                                     </Link>
                                 </li>
                                 <li className="flex flex-wrap gap-x-4 gap-y-1 px-3 pt-2 text-xs text-slate-500 dark:text-slate-400">
@@ -466,13 +493,14 @@ export default function WishListHeader() {
                             </Link>
                         </li>
                         <li>
-                            <Link href="#compare" className={actionLink}>
+                            {/* <Link href="#compare" className={actionLink}>
                                 <span className="relative">
                                     <Shuffle className="w-5 h-5" />
                                     <span className={badge}>0</span>
                                 </span>
                                 <span className="sr-only">Compare</span>
-                            </Link>
+                            </Link> */}
+                            <CompareNavLink />
                         </li>
                         <li className="relative group">
                             <Link href="/cart" className={actionLink}>

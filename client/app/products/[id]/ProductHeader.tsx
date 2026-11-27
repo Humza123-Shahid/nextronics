@@ -155,7 +155,11 @@ function Logo() {
     );
 }
 
-export default function ProductHeader() {
+export default function ProductHeader({
+    onCartClick,
+}: {
+    onCartClick?: () => void;
+}) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const { user, isAuthenticated, isAdmin, logout } = useAuth();
     const [wishlist, setWishlist] = useState<Wishlist | null>(null);
@@ -382,19 +386,38 @@ export default function ProductHeader() {
                                         <span>Wishlist</span>
                                     </Link>
                                     <CompareNavLink showLabel onClick={() => setMobileOpen(false)} />
-                                    <Link
-                                        href="/cart"
-                                        onClick={() => setMobileOpen(false)}
-                                        className={actionLink}
-                                    >
-                                        <span className="relative">
-                                            <ShoppingCart className="w-4 h-4" />
-                                            <span className={badge}>
-                                                {items.reduce((acc, item) => acc + item.quantity, 0)}
+                                    {onCartClick ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMobileOpen(false);
+                                                onCartClick();
+                                            }}
+                                            className={actionLink}
+                                        >
+                                            <span className="relative">
+                                                <ShoppingCart className="w-4 h-4" />
+                                                <span className={badge}>
+                                                    {items.reduce((acc, item) => acc + item.quantity, 0)}
+                                                </span>
                                             </span>
-                                        </span>
-                                        <span>Cart</span>
-                                    </Link>
+                                            <span>Cart</span>
+                                        </button>
+                                    ) : (
+                                        <Link
+                                            href="/cart"
+                                            onClick={() => setMobileOpen(false)}
+                                            className={actionLink}
+                                        >
+                                            <span className="relative">
+                                                <ShoppingCart className="w-4 h-4" />
+                                                <span className={badge}>
+                                                    {items.reduce((acc, item) => acc + item.quantity, 0)}
+                                                </span>
+                                            </span>
+                                            <span>Cart</span>
+                                        </Link>
+                                    )}
                                 </li>
                                 <li className="flex flex-wrap gap-x-4 gap-y-1 px-3 pt-2 text-xs text-slate-500 dark:text-slate-400">
                                     <Link href="/signin" className="hover:text-blue-600">Login</Link>
@@ -503,13 +526,23 @@ export default function ProductHeader() {
                             <CompareNavLink />
                         </li>
                         <li className="relative group">
-                            <Link href="/cart" className={actionLink}>
-                                <span className="relative">
-                                    <ShoppingCart className="w-5 h-5" />
-                                    <span className={badge}>{items.reduce((acc, item) => acc + item.quantity, 0)}</span>
-                                </span>
-                                <span className="sr-only">Cart</span>
-                            </Link>
+                            {onCartClick ? (
+                                <button type="button" onClick={onCartClick} className={actionLink}>
+                                    <span className="relative">
+                                        <ShoppingCart className="w-5 h-5" />
+                                        <span className={badge}>{items.reduce((acc, item) => acc + item.quantity, 0)}</span>
+                                    </span>
+                                    <span className="sr-only">Cart</span>
+                                </button>
+                            ) : (
+                                <Link href="/cart" className={actionLink}>
+                                    <span className="relative">
+                                        <ShoppingCart className="w-5 h-5" />
+                                        <span className={badge}>{items.reduce((acc, item) => acc + item.quantity, 0)}</span>
+                                    </span>
+                                    <span className="sr-only">Cart</span>
+                                </Link>
+                            )}
                             {/* <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition absolute right-0 top-full w-64 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-b-lg shadow-xl p-5 text-center">
                                 <h4 className="text-sm font-bold">Your cart is empty</h4>
                             </div> */}

@@ -23,10 +23,20 @@ import {
   UserPlus,
   ShieldCheck,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { GADGET_TAB_MAP, goToGadgets } from "../lib/gadgetsNav"; // adjust path if needed
 import { useAuth } from "../context/AuthContext";
 import { Wishlist } from "../lib/wishlist";
 
+// Add a SearchResult interface (adjust fields to match your Django serializer)
+interface SearchProduct {
+  id: number;
+  name: string;
+  slug?: string;
+  price: number | string;
+  image?: string | null;
+  category_name?: string;
+}
 
 interface SubMenuItem {
   name: string;
@@ -130,6 +140,118 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+
+  const router = useRouter();
+
+  // Live search state (shared or separate for main & compact search)
+  const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Active query from either main header or compact header
+  const activeQuery = compactSearchOpen ? compactSearchQuery : searchQuery;
+
+  useEffect(() => {
+    const trimmed = activeQuery.trim();
+
+    if (!trimmed) {
+      setSearchResults([]);
+      setShowSearchDropdown(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      setShowSearchDropdown(true);
+
+      try {
+        // Adjust endpoint/query param (?search= or ?q=) to match your DRF backend
+        const res = await fetch(
+          `http://127.0.0.1:8080/api/products/?search=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal }
+        );
+
+        if (!res.ok) {
+          throw new Error(`Search failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+        // Supports both paginated DRF responses ({ results: [...] }) and plain arrays
+        const list: SearchProduct[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.results)
+            ? data.results
+            : [];
+
+        // Client-side filter fallback in case backend returns all products unfiltered
+        const filtered = list.filter((item) =>
+          item.name.toLowerCase().includes(trimmed.toLowerCase())
+        );
+
+        setSearchResults(filtered.slice(0, 8));
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name !== "AbortError") {
+          console.error("Product search error:", err);
+          setSearchResults([]);
+        }
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250); // 250ms debounce to avoid spamming requests on every keystroke
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [activeQuery]);
+
+  // Close search dropdown on outside click or Escape
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target as Node)
+      ) {
+        setShowSearchDropdown(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowSearchDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const handleSelectProduct = (productId: number) => {
+    setShowSearchDropdown(false);
+    setCompactSearchOpen(false);
+    setSearchQuery("");
+    setCompactSearchQuery("");
+    // Change `/products/` to `/shop/` or whatever parent folder contains `[id]/page.tsx`
+    router.push(`/products/${productId}`);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = activeQuery.trim();
+    if (!trimmed) return;
+
+    if (searchResults.length > 0) {
+      handleSelectProduct(searchResults[0].id);
+    } else {
+      setShowSearchDropdown(false);
+      router.push(`/shop?search=${encodeURIComponent(trimmed)}`);
+    }
+  };
   // --- Gadget section navigation (On Sale / Most Popular / New Arrival) ---
   // If the href maps to a gadget tab, we prevent the default anchor jump,
   // run the optional callback (e.g. close a menu), then fire the tab-select
@@ -569,14 +691,17 @@ export default function Header() {
             </div>
 
             {/* CENTER: Search Bar Focus Scale Animation */}
-            <div className="hidden md:flex flex-1 max-w-2xl">
+            <div className="hidden md:flex flex-1 max-w-2xl relative" ref={searchContainerRef}>
               <form
-                onSubmit={(e) => e.preventDefault()}
+                onSubmit={handleSearchSubmit}
                 className="w-full flex items-center rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 shadow-sm focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/20 overflow-hidden"
               >
                 <input
                   type="text"
                   value={searchQuery}
+                  onFocus={() => {
+                    if (searchQuery.trim()) setShowSearchDropdown(true);
+                  }}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for products, laptops, audio, phones..."
                   className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
@@ -591,6 +716,59 @@ export default function Header() {
                   <span>Search</span>
                 </motion.button>
               </form>
+              {/* Live Search Results Dropdown */}
+              {showSearchDropdown && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 rounded-xl bg-white dark:bg-[#0d1322] border border-slate-200 dark:border-slate-800 shadow-2xl z-50 max-h-96 overflow-y-auto">
+                  {isSearching ? (
+                    <div className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                      Searching products...
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                      No products found for &ldquo;{searchQuery.trim()}&rdquo;.
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                      {searchResults.map((product) => (
+                        <li key={product.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectProduct(product.id)}
+                            className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-blue-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              {product.image ? (
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-400 shrink-0">
+                                  No Img
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                  {product.name}
+                                </p>
+                                {product.category_name && (
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                    {product.category_name}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-xs sm:text-sm font-bold text-blue-600 dark:text-cyan-400 shrink-0">
+                              ${Number(product.price).toFixed(2)}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* RIGHT: Action Icons */}

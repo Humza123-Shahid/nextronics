@@ -8,10 +8,12 @@ import Link from 'next/link';
 import ProductHeader from "./ProductHeader";
 import Footer from "../../components/Footer";
 import { Metadata } from 'next';
+import CommonHeader from "../../components/CommonHeader";
 import { Star, ShoppingBag, CheckCircle, XCircle, Truck, ShieldCheck, ArrowRight, Minus, Plus } from 'lucide-react';
 // import { Product } from "@/admin/types";
 import { type ProductVariant, type Product, type Category, type Brand } from "../../components/data";
-
+import { type Cart } from "../../types/cart"; // Adjust import path to match your Cart type
+import CartDrawer from "../../components/CartDrawer";
 
 
 
@@ -87,6 +89,43 @@ export default function ProductDetailPage() {
 
   // 1. Add the quantity state
   const [quantity, setQuantity] = useState<number>(1);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cart, setCart] = useState<Cart | null>(null);
+
+  const fetchCart = async () => {
+    try {
+      const token = await getAuthCookie();
+      const guestSessionKey = localStorage.getItem("guest_session_key");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+      if (token && token !== "null" && token !== "undefined" && token.trim() !== "") {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else if (guestSessionKey && guestSessionKey !== "null" && guestSessionKey !== "undefined") {
+        headers["X-Guest-Session-Key"] = guestSessionKey;
+      }
+
+      const res = await fetch('http://127.0.0.1:8080/api/carts/', {
+        method: 'GET',
+        // headers: {
+        //     'Authorization': `Bearer ${token}`,
+        //     'Content-Type': 'application/json'
+        // }
+        headers: headers,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCart(Array.isArray(data) ? data[0] : data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch cart:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCart();
+    window.addEventListener("cartUpdated", fetchCart);
+    return () => window.removeEventListener("cartUpdated", fetchCart);
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -208,8 +247,11 @@ export default function ProductDetailPage() {
       }
 
       console.log('Cart updated successfully:', data);
-      alert('Item added to cart successfully!');
+      //alert('Item added to cart successfully!');
+      await fetchCart();
       triggerCartUpdate();
+      setIsCartOpen(true);
+      //triggerCartUpdate();
     } catch (error: any) {
       console.error('Error adding to cart:', error.message);
       alert(error.message || 'Something went wrong');
@@ -217,7 +259,13 @@ export default function ProductDetailPage() {
   }
   return (
     <>
-      <ProductHeader />
+      <CommonHeader onCartClick={() => setIsCartOpen(true)} />
+      {/* <ProductHeader onCartClick={() => setIsCartOpen(true)} /> */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-white text-gray-900 min-h-screen rounded-3xl"> */}
         {/* Breadcrumb Navigation */}
